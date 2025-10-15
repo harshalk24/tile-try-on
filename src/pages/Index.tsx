@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Navigation from "@/components/Navigation";
+import HeroSection from "@/components/HeroSection";
 import Header from "@/components/Header";
 import UploadArea from "@/components/UploadArea";
 import TileGallery, { TileSKU } from "@/components/TileGallery";
@@ -8,6 +10,7 @@ import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 
 const Index = () => {
+  const [showVisualizer, setShowVisualizer] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedTile, setSelectedTile] = useState<TileSKU | null>(null);
@@ -22,13 +25,11 @@ const Index = () => {
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error("Please upload a valid image file (JPG or PNG)");
       return;
     }
 
-    // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error("File size must be less than 10MB");
       return;
@@ -67,10 +68,7 @@ const Index = () => {
       // Mock visualization with delay
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // For demo purposes, using the tile image as result
-      // Replace this with actual API response
       setVisualizedImage(selectedTile.image);
-      
       toast.success("Visualization complete!");
     } catch (error) {
       console.error("Visualization error:", error);
@@ -86,25 +84,41 @@ const Index = () => {
     setVisualizedImage(null);
   };
 
+  const handleBackToHome = () => {
+    setShowVisualizer(false);
+    setSelectedFile(null);
+    setPreview(null);
+    setSelectedTile(null);
+    setShowResult(false);
+    setVisualizedImage(null);
+  };
+
+  if (!showVisualizer) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <HeroSection onGetStarted={() => setShowVisualizer(true)} />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <Header />
+    <div className="min-h-screen bg-background">
+      <Header onBack={handleBackToHome} showBackButton={true} />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-12">
         {!showResult ? (
-          <div className="space-y-8 animate-fade-in">
-            {/* Hero Section */}
-            <div className="text-center space-y-4 py-8">
-              <h2 className="text-4xl md:text-5xl font-bold">
-                Visualize Tiles in Your Space
+          <div className="space-y-12 animate-fade-in">
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Visualize Your Space
               </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Upload a photo of your room and see how different tiles look instantly
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Upload a photo of your room and see how different tiles transform your space
               </p>
             </div>
 
-            {/* Upload Section */}
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <UploadArea
                 onFileSelect={handleFileSelect}
                 selectedFile={selectedFile}
@@ -112,7 +126,6 @@ const Index = () => {
               />
             </div>
 
-            {/* Tile Gallery */}
             {preview && (
               <div className="animate-fade-in">
                 <TileGallery
@@ -122,17 +135,16 @@ const Index = () => {
               </div>
             )}
 
-            {/* Visualize Button */}
             {preview && selectedTile && (
               <div className="flex justify-center animate-fade-in">
                 <Button
                   onClick={handleVisualize}
                   disabled={isVisualizing}
                   size="lg"
-                  className="gap-2 bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8"
+                  className="gap-2 bg-primary hover:bg-primary/90 rounded-full text-base px-10 h-14"
                 >
                   <Sparkles className="h-5 w-5" />
-                  Visualize My Room
+                  Generate Visualization
                 </Button>
               </div>
             )}

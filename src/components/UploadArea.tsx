@@ -50,17 +50,17 @@ const UploadArea = ({ onFileSelect, selectedFile, preview }: UploadAreaProps) =>
           <img
             src={preview}
             alt="Room preview"
-            className="w-full h-64 object-cover rounded-xl shadow-medium"
+            className="w-full h-80 object-cover rounded-2xl shadow-medium"
           />
           <Button
             onClick={clearFile}
             size="icon"
             variant="destructive"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
-          <div className="absolute bottom-2 left-2 bg-card/90 backdrop-blur-sm px-3 py-1 rounded-lg text-sm">
+          <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur-sm px-4 py-2 rounded-lg text-sm font-medium">
             {selectedFile?.name}
           </div>
         </div>
@@ -71,11 +71,11 @@ const UploadArea = ({ onFileSelect, selectedFile, preview }: UploadAreaProps) =>
           onDragOver={handleDrag}
           onDrop={handleDrop}
           className={`
-            relative border-2 border-dashed rounded-xl p-12 text-center
+            relative border-2 border-dashed rounded-2xl p-16 text-center
             transition-all duration-300 cursor-pointer
             ${isDragging 
-              ? "border-primary bg-primary/5 scale-[1.02]" 
-              : "border-border bg-gradient-subtle hover:border-primary/50"
+              ? "border-primary bg-muted scale-[1.01]" 
+              : "border-border bg-card hover:border-primary/50 hover:bg-muted/50"
             }
           `}
         >
@@ -85,16 +85,16 @@ const UploadArea = ({ onFileSelect, selectedFile, preview }: UploadAreaProps) =>
             onChange={handleFileInput}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          <div className="flex flex-col items-center gap-4">
-            <div className="bg-gradient-primary p-4 rounded-2xl shadow-soft">
-              <Upload className="h-8 w-8 text-primary-foreground" />
+          <div className="flex flex-col items-center gap-6">
+            <div className="bg-primary p-5 rounded-full shadow-soft">
+              <Upload className="h-10 w-10 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-lg font-semibold mb-2">
-                Drop your room image here
+              <p className="text-xl font-semibold mb-2">
+                Upload your room image
               </p>
-              <p className="text-sm text-muted-foreground">
-                or click to browse • JPG, PNG up to 10MB
+              <p className="text-muted-foreground">
+                Drag and drop or click to browse • JPG, PNG up to 10MB
               </p>
             </div>
           </div>
