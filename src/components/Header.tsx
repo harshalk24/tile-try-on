@@ -18,7 +18,7 @@ const Header = ({ onBack, showBackButton = false }: HeaderProps) => {
             </Button>
           )}
           <h1 className="text-xl font-bold tracking-tight">
-            nirwana.ai
+            Roommorph.ai
           </h1>
         </div>
       </div>
