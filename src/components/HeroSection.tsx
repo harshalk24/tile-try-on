@@ -23,9 +23,9 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
       {/* Content */}
       <div className="relative z-10 text-center px-6 py-32 max-w-5xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-          Visualization made
+          <span style={{ color: 'white' }}>Visualization made</span>
           <br />
-          stunningly simple
+          <span style={{ color: 'black' }}>stunningly simple</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
           Built for brands that want to inspire, convert and grow - everywhere they sell.

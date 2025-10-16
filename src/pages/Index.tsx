@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
@@ -7,7 +7,8 @@ import UploadArea from "@/components/UploadArea";
 import TileGallery, { TileSKU } from "@/components/TileGallery";
 import VisualizationResult from "@/components/VisualizationResult";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, AlertCircle } from "lucide-react";
+import { VisualizationService } from "@/services/visualizationService";
 
 const Index = () => {
   const [showVisualizer, setShowVisualizer] = useState(false);
@@ -17,6 +18,16 @@ const Index = () => {
   const [isVisualizing, setIsVisualizing] = useState(false);
   const [visualizedImage, setVisualizedImage] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  // Check server status on component mount
+  useEffect(() => {
+    const checkServer = async () => {
+      const isOnline = await VisualizationService.checkServerHealth();
+      setServerStatus(isOnline ? 'online' : 'offline');
+    };
+    checkServer();
+  }, []);
 
   const handleFileSelect = (file: File | null) => {
     if (!file) {
@@ -49,30 +60,29 @@ const Index = () => {
       return;
     }
 
+    if (serverStatus !== 'online') {
+      toast.error("Visualization server is offline. Please start the backend server.");
+      return;
+    }
+
     setIsVisualizing(true);
     setShowResult(true);
 
     try {
-      // TODO: Replace this with actual API call to your Python backend
-      // const formData = new FormData();
-      // formData.append('image', selectedFile);
-      // formData.append('sku_id', selectedTile.id);
-      // 
-      // const response = await fetch('YOUR_API_ENDPOINT/visualize', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const result = await response.json();
-      // setVisualizedImage(result.image_url);
+      const result = await VisualizationService.visualizeRoom({
+        roomImage: selectedFile,
+        tileId: selectedTile.id
+      });
 
-      // Mock visualization with delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      setVisualizedImage(selectedTile.image);
-      toast.success("Visualization complete!");
+      if (result.success) {
+        setVisualizedImage(result.imageUrl);
+        toast.success("Visualization complete!");
+      } else {
+        throw new Error(result.message || 'Visualization failed');
+      }
     } catch (error) {
       console.error("Visualization error:", error);
-      toast.error("Failed to visualize. Please try again.");
+      toast.error(`Failed to visualize: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setShowResult(false);
     } finally {
       setIsVisualizing(false);
@@ -136,15 +146,21 @@ const Index = () => {
             )}
 
             {preview && selectedTile && (
-              <div className="flex justify-center animate-fade-in">
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                {serverStatus === 'offline' && (
+                  <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-4 py-2 rounded-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">Visualization server is offline. Please start the backend server.</span>
+                  </div>
+                )}
                 <Button
                   onClick={handleVisualize}
-                  disabled={isVisualizing}
+                  disabled={isVisualizing || serverStatus !== 'online'}
                   size="lg"
                   className="gap-2 bg-primary hover:bg-primary/90 rounded-full text-base px-10 h-14"
                 >
                   <Sparkles className="h-5 w-5" />
-                  Generate Visualization
+                  {isVisualizing ? 'Generating...' : 'Generate Visualization'}
                 </Button>
               </div>
             )}
