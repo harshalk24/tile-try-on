@@ -3,6 +3,7 @@ const API_BASE_URL = 'http://localhost:3003';
 export interface VisualizationRequest {
   roomImage: File;
   tileId: string;
+  customTileFile?: File;
 }
 
 export interface VisualizationResponse {
@@ -16,6 +17,11 @@ export class VisualizationService {
     const formData = new FormData();
     formData.append('roomImage', request.roomImage);
     formData.append('tileId', request.tileId);
+    
+    // Add custom tile file if provided
+    if (request.customTileFile) {
+      formData.append('customTileFile', request.customTileFile);
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/visualize`, {

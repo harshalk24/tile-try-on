@@ -1,6 +1,7 @@
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { Search, Upload, X } from "lucide-react";
+import { useState, useRef } from "react";
 import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 import TileCard from "./TileCard";
 
 export interface TileSKU {
@@ -9,6 +10,8 @@ export interface TileSKU {
   image: string;
   size: string;
   price?: string;
+  isCustom?: boolean;
+  file?: File;
 }
 
 // Tile data - update with your actual tile images
@@ -71,10 +74,50 @@ interface TileGalleryProps {
 
 const TileGallery = ({ onTileSelect, selectedTile }: TileGalleryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [customTile, setCustomTile] = useState<TileSKU | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredTiles = mockTiles.filter(tile =>
     tile.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCustomTileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Please upload a valid image file (JPG or PNG)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be less than 10MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const customTileData: TileSKU = {
+        id: 'custom-tile-' + Date.now(),
+        name: 'Custom Tile',
+        image: reader.result as string,
+        size: 'Custom',
+        price: 'Custom',
+        isCustom: true,
+        file: file
+      };
+      setCustomTile(customTileData);
+      onTileSelect(customTileData);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeCustomTile = () => {
+    setCustomTile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -92,7 +135,57 @@ const TileGallery = ({ onTileSelect, selectedTile }: TileGalleryProps) => {
         </div>
       </div>
 
+      {/* Custom Tile Upload Section */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <h3 className="text-xl font-semibold">Upload Custom Tile</h3>
+          {customTile && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={removeCustomTile}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Remove
+            </Button>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCustomTileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Upload Tile Image
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            JPG, PNG up to 10MB
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-h-[600px] overflow-y-auto pr-2">
+        {/* Show custom tile first if uploaded */}
+        {customTile && (
+          <TileCard
+            key={customTile.id}
+            tile={customTile}
+            isSelected={selectedTile?.id === customTile.id}
+            onClick={() => onTileSelect(customTile)}
+          />
+        )}
+        
+        {/* Show predefined tiles */}
         {filteredTiles.map((tile) => (
           <TileCard
             key={tile.id}

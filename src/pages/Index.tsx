@@ -71,7 +71,8 @@ const Index = () => {
     try {
       const result = await VisualizationService.visualizeRoom({
         roomImage: selectedFile,
-        tileId: selectedTile.id
+        tileId: selectedTile.id,
+        customTileFile: selectedTile.isCustom ? selectedTile.file : undefined
       });
 
       if (result.success) {

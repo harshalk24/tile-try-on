@@ -62,9 +62,15 @@ app.get('/health', (req, res) => {
 });
 
 // Main visualization endpoint
-app.post('/api/visualize', upload.single('roomImage'), async (req, res) => {
+app.post('/api/visualize', upload.fields([
+  { name: 'roomImage', maxCount: 1 },
+  { name: 'customTileFile', maxCount: 1 }
+]), async (req, res) => {
   try {
-    if (!req.file) {
+    const roomImage = req.files?.roomImage?.[0];
+    const customTileFile = req.files?.customTileFile?.[0];
+    
+    if (!roomImage) {
       return res.status(400).json({ error: 'No room image uploaded' });
     }
 
@@ -73,22 +79,33 @@ app.post('/api/visualize', upload.single('roomImage'), async (req, res) => {
       return res.status(400).json({ error: 'No tile ID provided' });
     }
 
-    // Get tile image URL
-    const tileImageUrl = tileImages[tileId];
-    if (!tileImageUrl) {
-      return res.status(400).json({ error: 'Invalid tile ID' });
+    let tileImageUrl;
+    
+    // Check if it's a custom tile upload
+    if (customTileFile && tileId.startsWith('custom-tile-')) {
+      tileImageUrl = customTileFile.path;
+      console.log('Processing visualization request with custom tile...');
+    } else {
+      // Use predefined tile
+      tileImageUrl = tileImages[tileId];
+      if (!tileImageUrl) {
+        return res.status(400).json({ error: 'Invalid tile ID' });
+      }
+      console.log('Processing visualization request with predefined tile...');
     }
 
-    console.log('Processing visualization request...');
-    console.log('Room image:', req.file.path);
+    console.log('Room image:', roomImage.path);
     console.log('Tile ID:', tileId);
     console.log('Tile image URL:', tileImageUrl);
 
     // Call Python script for visualization
-    const result = await runVisualization(req.file.path, tileImageUrl, tileId);
+    const result = await runVisualization(roomImage.path, tileImageUrl, tileId);
     
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    // Clean up uploaded files
+    fs.unlinkSync(roomImage.path);
+    if (customTileFile) {
+      fs.unlinkSync(customTileFile.path);
+    }
     
     res.json({
       success: true,
@@ -99,9 +116,15 @@ app.post('/api/visualize', upload.single('roomImage'), async (req, res) => {
   } catch (error) {
     console.error('Visualization error:', error);
     
-    // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    // Clean up uploaded files on error
+    const roomImage = req.files?.roomImage?.[0];
+    const customTileFile = req.files?.customTileFile?.[0];
+    
+    if (roomImage && fs.existsSync(roomImage.path)) {
+      fs.unlinkSync(roomImage.path);
+    }
+    if (customTileFile && fs.existsSync(customTileFile.path)) {
+      fs.unlinkSync(customTileFile.path);
     }
     
     res.status(500).json({ 
