@@ -3,6 +3,8 @@ services:
     name: roommorph
     env: node
     plan: free
+    # NOTE: The buildCommand below is also likely to fail. 
+    # See the important notes in the 'Secondary Issues' section.
     buildCommand: |
       apt-get update && apt-get install -y python3 python3-pip
       npm install
@@ -10,5 +12,6 @@ services:
     startCommand: node server.js
     envVars:
       - key: PORT
-        value: 3003
+        value: 10000 # ⬅️ CRITICAL FIX: Must match the default in server.js
     autoDeploy: true
+    healthCheckPath: /health # ⬅️ Recommended: Add the health check path
