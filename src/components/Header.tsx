@@ -8,7 +8,7 @@ interface HeaderProps {
 
 const Header = ({ onBack, showBackButton = false }: HeaderProps) => {
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
+    <header className="border-b border-border bg-white backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {showBackButton && onBack && (
@@ -17,9 +17,11 @@ const Header = ({ onBack, showBackButton = false }: HeaderProps) => {
               Back
             </Button>
           )}
-          <h1 className="text-xl font-bold tracking-tight">
-            Roommorph.ai
-          </h1>
+          <img 
+            src="/logo/roommorph.ai logo.jpg" 
+            alt="RoomMorph.AI Logo" 
+            className="h-12 w-auto"
+          />
         </div>
       </div>
     </header>

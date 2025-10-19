@@ -1,0 +1,21 @@
+# Room Renders Placeholder
+
+This file serves as a placeholder for the room_renders directory.
+
+To add your own room images:
+
+1. Add your room image files to this directory with these exact names:
+   - modern-living-room.jpg
+   - cozy-bedroom.jpg
+   - kitchen-space.jpg
+   - bathroom-design.jpg
+
+2. Or update the roomRenders array in src/components/UploadArea.tsx to match your file names
+
+3. The images should be:
+   - JPG or PNG format
+   - At least 400x300 pixels
+   - Under 2MB each
+   - Clear, well-lit room photos
+
+The component will show a fallback placeholder for any missing images.

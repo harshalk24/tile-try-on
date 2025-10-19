@@ -61,6 +61,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Tile visualization server is running' });
 });
 
+// Serve static files from public directory
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Serve the resized image
+app.get('/temp_resized.jpg', (req, res) => {
+  const resizedPath = path.join(__dirname, 'public', 'temp_resized.jpg');
+  if (fs.existsSync(resizedPath)) {
+    res.sendFile(resizedPath);
+  } else {
+    res.status(404).json({ error: 'Resized image not found' });
+  }
+});
+
 // Main visualization endpoint
 app.post('/api/visualize', upload.fields([
   { name: 'roomImage', maxCount: 1 },
@@ -184,7 +197,7 @@ try:
     "identify only the floor area and replace its material using the second image as the tile reference. "
     "Preserve the exact same design of the tile. "
     "Preserve the exact camera perspective, room geometry, and proportions. "
-    "Do not alter walls, furniture, or lighting setup. "
+    "Do not alter walls, furniture, mat/carpet if any or lighting setup. "
     "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
     "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
     "Keep it photorealistic, as if the tiles were actually installed."
@@ -227,7 +240,7 @@ try:
         print("Output type:", type(output))
         print("Output content:", output)
 
-    # Resize output image to match original room image dimensions
+    # Resize output image to match original room image dimensions EXACTLY
     if output_url:
         try:
             # Download the generated image
@@ -239,20 +252,27 @@ try:
             original_img = Image.open(room_path)
             original_size = original_img.size
             
-            # Resize generated image to match original dimensions
-            if generated_img.size != original_size:
-                print(f"Resizing generated image from {generated_img.size} to {original_size}")
-                generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
-                
-                # Save resized image to a temporary file
-                resized_path = os.path.join(os.path.dirname(room_path), 'resized_output.jpg')
-                generated_img.save(resized_path, 'JPEG', quality=95)
-                
-                # Upload resized image to a temporary hosting service or use local path
-                # For now, we'll use the original URL but note that resizing was done
-                print("Image resized to match original dimensions")
-            else:
-                print("Generated image already matches original dimensions")
+            print(f"Original image size: {original_size}")
+            print(f"Generated image size: {generated_img.size}")
+            
+            # ALWAYS resize to match original dimensions exactly
+            print(f"Resizing generated image from {generated_img.size} to {original_size}")
+            generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
+            
+            # Save resized image to a temporary file
+            resized_path = os.path.join(os.path.dirname(room_path), 'resized_output.jpg')
+            generated_img.save(resized_path, 'JPEG', quality=95)
+            
+            # Upload the resized image to a temporary hosting service
+            # For now, we'll use a simple approach: save to a public directory
+            import shutil
+            public_resized_path = os.path.join(os.path.dirname(__file__), 'public', 'temp_resized.jpg')
+            shutil.copy2(resized_path, public_resized_path)
+            
+            # Return the local path that can be served by the web server
+            output_url = "http://localhost:3003/temp_resized.jpg"
+            print("Image resized to match original dimensions exactly")
+            print(f"Resized image available at: {output_url}")
                 
         except Exception as resize_error:
             print(f"Warning: Could not resize image: {resize_error}")

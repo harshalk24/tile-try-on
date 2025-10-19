@@ -42,14 +42,14 @@ const VisualizationResult = ({
             <img
               src={originalImage}
               alt="Original room"
-              className="w-full h-auto"
+              className="w-full h-[28rem] object-cover"
             />
           </div>
         </div>
 
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-muted-foreground">After</h3>
-          <div className="rounded-2xl overflow-hidden shadow-medium bg-muted min-h-[300px] flex items-center justify-center border border-border">
+          <div className="rounded-2xl overflow-hidden shadow-medium bg-muted h-[28rem] flex items-center justify-center border border-border">
             {isLoading ? (
               <div className="text-center space-y-4 p-8">
                 <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
@@ -62,7 +62,7 @@ const VisualizationResult = ({
               <img
                 src={visualizedImage}
                 alt="Visualized room"
-                className="w-full h-auto animate-scale-in"
+                className="w-full h-[28rem] object-cover animate-scale-in"
               />
             ) : (
               <p className="text-muted-foreground">No result yet</p>
