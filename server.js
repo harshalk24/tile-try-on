@@ -12,11 +12,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// ✅ Start only once
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Tile visualization server running on port ${PORT}`);
-});
-
 
 // Middleware
 app.use(cors());
@@ -361,7 +356,7 @@ except Exception as e:
 }
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Tile visualization server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
   console.log(`🎨 Visualization API: http://localhost:${PORT}/api/visualize`);
