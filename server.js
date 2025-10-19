@@ -12,6 +12,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+app.listen(PORT, () => {
+  console.log(`Tile visualization server running on port ${PORT}`);
+});
+
+
 // Middleware
 app.use(cors());
 app.use(express.json());
