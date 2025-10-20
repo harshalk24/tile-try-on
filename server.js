@@ -180,7 +180,7 @@ import requests
 import io
 
 # Set your API token
-os.environ["REPLICATE_API_TOKEN"] = "r8_LYITv7ADyG1ojaD4SQ3u5LKzdT1d6OQ1BUUxe"
+os.environ["REPLICATE_API_TOKEN"] = "r8_7MAD8wg7kj0YYhtn6we7KEJk2rvwONH3QFlav"
 
 # Image paths - use absolute paths
 room_path = r"${roomImagePath.replace(/\\/g, '\\\\')}"
