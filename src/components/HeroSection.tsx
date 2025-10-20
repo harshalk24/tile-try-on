@@ -27,10 +27,9 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
           <br />
           <span style={{ color: 'black' }}>stunningly simple</span>
         </h1>
-        {/* <p className="text-lg md:text-xl mb-16 max-w-2xl mx-auto" style={{ color: 'black' }}>
+        <p className="text-lg md:text-xl mb-16 max-w-2xl mx-auto" style={{ color: 'black' }}>
           Built for brands that want to inspire, convert and grow - everywhere they sell.
-        </p> */}
-        <div className="text-lg md:text-xl mb-16 max-w-2xl mx-auto" mb-20 style={{ color: 'black' }}>Built for brands that want to inspire, convert and grow - everywhere they se</div>
+        </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button 
             onClick={onGetStarted}

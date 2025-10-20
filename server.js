@@ -5,12 +5,11 @@ import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3003;
 
 
 // Middleware
@@ -179,7 +178,7 @@ import requests
 import io
 
 # Set your API token
-os.environ["REPLICATE_API_TOKEN"] = "r8_GPNcY5WFRUbT0zdZ56AA1A3uGMdZZrM2KFyQS"
+os.environ["REPLICATE_API_TOKEN"] = "r8_LYITv7ADyG1ojaD4SQ3u5LKzdT1d6OQ1BUUxe"
 
 # Image paths - use absolute paths
 room_path = r"${roomImagePath.replace(/\\/g, '\\\\')}"
@@ -194,14 +193,13 @@ try:
 
     # Prompt for flooring replacement
     prompt = (
-    "Perform a precise visual edit on the provided room photo: "
-    "identify only the floor area and replace its material using the second image as the tile reference. "
-    "Preserve the exact same design of the tile. "
-    "Preserve the exact camera perspective, room geometry, and proportions. "
-    "Do not alter walls, furniture, mat/carpet if any or lighting setup. "
-    "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
-    "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
-    "Keep it photorealistic, as if the tiles were actually installed."
+        "Perform a precise visual edit on the provided room photo: "
+        "identify only the floor area and replace its material using the second image as the tile reference. "
+        "Preserve the exact camera perspective, room geometry, and proportions. "
+        "Do not alter walls, furniture, or lighting setup. "
+        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
+        "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
+        "Keep it photorealistic, as if the tiles were actually installed."
     )
 
     # Prepare input data using local image files
@@ -210,7 +208,7 @@ try:
             "prompt": prompt,
             "image_input": [room_file, tile_file] # Pass file objects here
         }
-        
+
         output = replicate.run(
             "google/nano-banana",
             input=input_data
@@ -220,7 +218,7 @@ try:
 
     # Handle output - Google Nano-Banana returns different output types
     output_url = None
-    
+
     # Check if output is a string URL
     if isinstance(output, str) and output.startswith('http'):
         output_url = output
@@ -260,15 +258,9 @@ try:
             print(f"Resizing generated image from {generated_img.size} to {original_size}")
             generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
             
-            # Save resized image to a temporary file
-            resized_path = os.path.join(os.path.dirname(room_path), 'resized_output.jpg')
-            generated_img.save(resized_path, 'JPEG', quality=95)
-            
-            # Upload the resized image to a temporary hosting service
-            # For now, we'll use a simple approach: save to a public directory
-            import shutil
-            public_resized_path = os.path.join(os.path.dirname(__file__), 'public', 'temp_resized.jpg')
-            shutil.copy2(resized_path, public_resized_path)
+            # Save resized image to a temporary file in the public directory
+            public_resized_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'public', 'temp_resized.jpg')
+            generated_img.save(public_resized_path, 'JPEG', quality=95)
             
             # Return the local path that can be served by the web server
             output_url = "http://localhost:3003/temp_resized.jpg"
