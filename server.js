@@ -1,4 +1,5 @@
 import express from 'express';
+import dotenv from 'dotenv';
 import multer from 'multer';
 import cors from 'cors';
 import path from 'path';
@@ -6,6 +7,7 @@ import fs from 'fs';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -168,6 +170,13 @@ async function runVisualization(roomImagePath, tileImageUrl, tileId) {
     
     fs.copyFileSync(tileImageUrl, tileImagePath);
     
+    // Read Replicate token from environment (do not hardcode)
+    const replicateToken = process.env.REPLICATE_API_TOKEN;
+    if (!replicateToken) {
+      reject(new Error('REPLICATE_API_TOKEN is not set as an environment variable.'));
+      return;
+    }
+
     // Run Python script
     const pythonScript = `
 import os
@@ -178,9 +187,11 @@ import numpy as np
 import shutil
 import requests
 import io
+import sys
 
-# Set your API token
-os.environ["REPLICATE_API_TOKEN"] = "r8_7MAD8wg7kj0YYhtn6we7KEJk2rvwONH3QFlav"
+# Ensure API token is available in environment
+if "REPLICATE_API_TOKEN" not in os.environ or not os.environ.get("REPLICATE_API_TOKEN"):
+    sys.exit("Error: REPLICATE_API_TOKEN environment variable is not set.")
 
 # Image paths - use absolute paths
 room_path = r"${roomImagePath.replace(/\\/g, '\\\\')}"
@@ -291,7 +302,8 @@ except Exception as e:
 
         // Run Python script with timeout
         const python = spawn('python', [scriptPath], {
-          stdio: ['pipe', 'pipe', 'pipe']
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...process.env, REPLICATE_API_TOKEN: replicateToken }
         });
 
         // Set a timeout for the Python script (5 minutes)
