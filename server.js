@@ -307,7 +307,9 @@ except Exception as e:
         fs.writeFileSync(scriptPath, pythonScript);
 
         // Run Python script with timeout
-        const python = spawn('python', [scriptPath], {
+        // Try python3 first, fallback to python
+        const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+        const python = spawn(pythonCommand, [scriptPath], {
           stdio: ['pipe', 'pipe', 'pipe'],
           env: { 
             ...process.env, 
