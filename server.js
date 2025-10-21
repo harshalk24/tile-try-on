@@ -206,7 +206,7 @@ try:
     # Prompt for flooring replacement
     prompt = (
         "Perform a precise visual edit on the provided room photo: "
-        "identify only the floor area and replace its material using the second image as the tile reference. "
+        "identify only the floor area completely in the room, do not miss any part of the flooring and replace its material using the second image as the tile reference. "
         "Preserve the exact camera perspective, room geometry, and proportions. "
         "Do not alter walls, furniture, or lighting setup. "
         "Do not stretch, distort, or alter the room dimensions in any way. "
