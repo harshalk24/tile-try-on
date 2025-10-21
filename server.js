@@ -260,9 +260,26 @@ try:
             response = requests.get(output_url)
             generated_img = Image.open(io.BytesIO(response.content))
             
-            # Get original room image dimensions
+            # Get original room image dimensions and orientation
             original_img = Image.open(room_path)
             original_size = original_img.size
+            
+            # Handle EXIF orientation for original image
+            try:
+                from PIL.ExifTags import ORIENTATION
+                exif = original_img._getexif()
+                if exif is not None:
+                    orientation = exif.get(ORIENTATION)
+                    if orientation == 3:
+                        original_img = original_img.rotate(180, expand=True)
+                    elif orientation == 6:
+                        original_img = original_img.rotate(270, expand=True)
+                    elif orientation == 8:
+                        original_img = original_img.rotate(90, expand=True)
+                    original_size = original_img.size
+            except (AttributeError, KeyError, TypeError):
+                # No EXIF data or orientation info
+                pass
             
             print(f"Original image size: {original_size}")
             print(f"Generated image size: {generated_img.size}")
@@ -282,7 +299,9 @@ try:
             
             # Ensure the public directory exists
             os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
-            generated_img.save(public_resized_path, 'JPEG', quality=95)
+            
+            # Save with proper orientation (remove EXIF to prevent rotation issues)
+            generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True)
             
             # Return the local path that can be served by the web server
             # Use the same origin as the request to avoid hardcoded localhost
