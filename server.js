@@ -272,11 +272,17 @@ try:
             generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
             
             # Save resized image to a temporary file in the public directory
-            public_resized_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'public', 'temp_resized.jpg')
+            # Get the server's public directory path (parent of current temp dir)
+            server_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            public_resized_path = os.path.join(server_root, 'public', 'temp_resized.jpg')
+            
+            # Ensure the public directory exists
+            os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
             generated_img.save(public_resized_path, 'JPEG', quality=95)
             
             # Return the local path that can be served by the web server
-            output_url = "http://localhost:3003/temp_resized.jpg"
+            # Use the same origin as the request to avoid hardcoded localhost
+            output_url = "/temp_resized.jpg"
             print("Image resized to match original dimensions exactly")
             print(f"Resized image available at: {output_url}")
                 

@@ -36,6 +36,12 @@ export class VisualizationService {
       }
 
       const result = await response.json();
+      
+      // Convert relative URLs to absolute URLs
+      if (result.imageUrl && result.imageUrl.startsWith('/')) {
+        result.imageUrl = API_BASE_URL + result.imageUrl;
+      }
+      
       return result;
     } catch (error) {
       console.error('Visualization API error:', error);
