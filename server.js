@@ -68,9 +68,10 @@ app.get('/health', (req, res) => {
 // Serve static files from public directory
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Serve the resized image
-app.get('/temp_resized.jpg', (req, res) => {
-  const resizedPath = path.join(__dirname, 'public', 'temp_resized.jpg');
+// Serve the resized images (dynamic filenames)
+app.get('/temp_resized_*', (req, res) => {
+  const filename = req.path.substring(1); // Remove leading slash
+  const resizedPath = path.join(__dirname, 'public', filename);
   if (fs.existsSync(resizedPath)) {
     res.sendFile(resizedPath);
   } else {
@@ -206,13 +207,12 @@ try:
     prompt = (
         "Perform a precise visual edit on the provided room photo: "
         "identify only the floor area and replace its material using the second image as the tile reference. "
-        "CRITICAL: Preserve the exact camera perspective, room geometry, aspect ratio, and all proportions. "
-        "Do not stretch, distort, or alter the room dimensions in any way. "
+        "Preserve the exact camera perspective, room geometry, and proportions. "
         "Do not alter walls, furniture, or lighting setup. "
-        "Blend the new floor texture naturally, maintaining proper scale and perspective. "
-        "Apply realistic material mapping with correct tile proportions and spacing. "
-        "Use soft edge transitions to avoid visible cutouts or overpainting. "
-        "Keep it photorealistic with accurate perspective and no distortion."
+        "Do not stretch, distort, or alter the room dimensions in any way. "
+        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
+        "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
+        "Keep it photorealistic, as if the tiles were actually installed."
     )
 
     # Prepare input data using local image files
@@ -274,7 +274,11 @@ try:
             # Save resized image to a temporary file in the public directory
             # Get the server's public directory path from environment variable
             server_root = os.environ.get('SERVER_ROOT', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            public_resized_path = os.path.join(server_root, 'public', 'temp_resized.jpg')
+            
+            # Generate unique filename to avoid caching issues
+            import time
+            unique_filename = f"temp_resized_{int(time.time() * 1000)}.jpg"
+            public_resized_path = os.path.join(server_root, 'public', unique_filename)
             
             # Ensure the public directory exists
             os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
@@ -282,7 +286,7 @@ try:
             
             # Return the local path that can be served by the web server
             # Use the same origin as the request to avoid hardcoded localhost
-            output_url = "/temp_resized.jpg"
+            output_url = f"/{unique_filename}"
             print("Image resized to match original dimensions exactly")
             print(f"Resized image available at: {output_url}")
                 
