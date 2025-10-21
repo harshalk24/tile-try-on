@@ -183,8 +183,6 @@ import os
 import replicate
 import tempfile
 from PIL import Image
-import numpy as np
-import shutil
 import requests
 import io
 import sys
@@ -208,11 +206,13 @@ try:
     prompt = (
         "Perform a precise visual edit on the provided room photo: "
         "identify only the floor area and replace its material using the second image as the tile reference. "
-        "Preserve the exact camera perspective, room geometry, and proportions. "
+        "CRITICAL: Preserve the exact camera perspective, room geometry, aspect ratio, and all proportions. "
+        "Do not stretch, distort, or alter the room dimensions in any way. "
         "Do not alter walls, furniture, or lighting setup. "
-        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
-        "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
-        "Keep it photorealistic, as if the tiles were actually installed."
+        "Blend the new floor texture naturally, maintaining proper scale and perspective. "
+        "Apply realistic material mapping with correct tile proportions and spacing. "
+        "Use soft edge transitions to avoid visible cutouts or overpainting. "
+        "Keep it photorealistic with accurate perspective and no distortion."
     )
 
     # Prepare input data using local image files
