@@ -272,8 +272,8 @@ try:
             generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
             
             # Save resized image to a temporary file in the public directory
-            # Get the server's public directory path (parent of current temp dir)
-            server_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Get the server's public directory path from environment variable
+            server_root = os.environ.get('SERVER_ROOT', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             public_resized_path = os.path.join(server_root, 'public', 'temp_resized.jpg')
             
             # Ensure the public directory exists
@@ -309,7 +309,11 @@ except Exception as e:
         // Run Python script with timeout
         const python = spawn('python', [scriptPath], {
           stdio: ['pipe', 'pipe', 'pipe'],
-          env: { ...process.env, REPLICATE_API_TOKEN: replicateToken }
+          env: { 
+            ...process.env, 
+            REPLICATE_API_TOKEN: replicateToken,
+            SERVER_ROOT: __dirname
+          }
         });
 
         // Set a timeout for the Python script (5 minutes)
