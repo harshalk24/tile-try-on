@@ -1,5 +1,6 @@
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
+import RoomEstimation from "./RoomEstimation";
 
 interface VisualizationResultProps {
   originalImage: string;
@@ -70,6 +71,13 @@ const VisualizationResult = ({
           </div>
         </div>
       </div>
+
+      {/* Room Estimation Section - Only show when visualization is complete */}
+      {visualizedImage && !isLoading && (
+        <div className="mt-12 animate-fade-in">
+          <RoomEstimation />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,12 @@
-// Use environment variable for API base URL, fallback to current origin
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+/**
+ * API Base URL Configuration
+ * 
+ * Development: Uses http://localhost:3003 (backend server port)
+ * Production: Uses window.location.origin (same origin as frontend)
+ * Override: Set VITE_API_BASE_URL environment variable
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.DEV ? 'http://localhost:3003' : window.location.origin);
 
 export interface VisualizationRequest {
   roomImage: File;
