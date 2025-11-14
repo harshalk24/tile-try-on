@@ -12,6 +12,8 @@ export interface VisualizationRequest {
   roomImage: File;
   tileId: string;
   customTileFile?: File;
+  visualizationType?: "floor" | "walls" | "both";
+  wallTileFile?: File;
 }
 
 export interface VisualizationResponse {
@@ -25,10 +27,16 @@ export class VisualizationService {
     const formData = new FormData();
     formData.append('roomImage', request.roomImage);
     formData.append('tileId', request.tileId);
+    formData.append('visualizationType', request.visualizationType || 'floor');
     
     // Add custom tile file if provided
     if (request.customTileFile) {
       formData.append('customTileFile', request.customTileFile);
+    }
+
+    // Add wall tile file if provided
+    if (request.wallTileFile) {
+      formData.append('wallTileFile', request.wallTileFile);
     }
 
     try {

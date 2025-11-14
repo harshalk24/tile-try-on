@@ -94,3 +94,4 @@ export function formatCurrency(amount: number): string {
 export function formatNumber(number: number): string {
   return new Intl.NumberFormat('en-IN').format(number);
 }
+

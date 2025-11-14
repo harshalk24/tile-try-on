@@ -82,47 +82,76 @@ app.get('/temp_resized_*', (req, res) => {
 // Main visualization endpoint
 app.post('/api/visualize', upload.fields([
   { name: 'roomImage', maxCount: 1 },
-  { name: 'customTileFile', maxCount: 1 }
+  { name: 'customTileFile', maxCount: 1 },
+  { name: 'wallTileFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
     const roomImage = req.files?.roomImage?.[0];
     const customTileFile = req.files?.customTileFile?.[0];
+    const wallTileFile = req.files?.wallTileFile?.[0];
     
     if (!roomImage) {
       return res.status(400).json({ error: 'No room image uploaded' });
     }
 
-    const { tileId } = req.body;
-    if (!tileId) {
-      return res.status(400).json({ error: 'No tile ID provided' });
+    const { tileId, visualizationType } = req.body;
+
+    // Validate wall tile if required
+    if ((visualizationType === 'walls' || visualizationType === 'both') && !wallTileFile) {
+      return res.status(400).json({ error: 'Wall tile image is required for wall visualization' });
     }
 
-    let tileImageUrl;
-    
-    // Check if it's a custom tile upload
-    if (customTileFile && tileId.startsWith('custom-tile-')) {
-      tileImageUrl = customTileFile.path;
-      console.log('Processing visualization request with custom tile...');
-    } else {
-      // Use predefined tile
-      tileImageUrl = tileImages[tileId];
-      if (!tileImageUrl) {
-        return res.status(400).json({ error: 'Invalid tile ID' });
+    // For walls-only visualization, we don't need a floor tile
+    let tileImageUrl = null;
+    if (visualizationType !== 'walls') {
+      if (!tileId) {
+        return res.status(400).json({ error: 'No tile ID provided' });
       }
-      console.log('Processing visualization request with predefined tile...');
+      
+      // Check if it's a custom tile upload
+      if (customTileFile && tileId.startsWith('custom-tile-')) {
+        tileImageUrl = customTileFile.path;
+        console.log('Processing visualization request with custom tile...');
+      } else {
+        // Use predefined tile
+        tileImageUrl = tileImages[tileId];
+        if (!tileImageUrl) {
+          return res.status(400).json({ error: 'Invalid tile ID' });
+        }
+        console.log('Processing visualization request with predefined tile...');
+      }
+    } else {
+      console.log('Processing walls-only visualization (no floor tile needed)...');
     }
 
     console.log('Room image:', roomImage.path);
     console.log('Tile ID:', tileId);
     console.log('Tile image URL:', tileImageUrl);
+    console.log('Visualization type:', visualizationType || 'floor');
+    console.log('Wall tile file:', wallTileFile?.path || 'None');
+
+    // Determine wall tile path if provided
+    let wallTilePath = null;
+    if (wallTileFile) {
+      wallTilePath = wallTileFile.path;
+    }
 
     // Call Python script for visualization
-    const result = await runVisualization(roomImage.path, tileImageUrl, tileId);
+    const result = await runVisualization(
+      roomImage.path, 
+      tileImageUrl, 
+      tileId, 
+      visualizationType || 'floor',
+      wallTilePath
+    );
     
     // Clean up uploaded files
     fs.unlinkSync(roomImage.path);
     if (customTileFile) {
       fs.unlinkSync(customTileFile.path);
+    }
+    if (wallTileFile) {
+      fs.unlinkSync(wallTileFile.path);
     }
     
     res.json({
@@ -137,12 +166,16 @@ app.post('/api/visualize', upload.fields([
     // Clean up uploaded files on error
     const roomImage = req.files?.roomImage?.[0];
     const customTileFile = req.files?.customTileFile?.[0];
+    const wallTileFile = req.files?.wallTileFile?.[0];
     
     if (roomImage && fs.existsSync(roomImage.path)) {
       fs.unlinkSync(roomImage.path);
     }
     if (customTileFile && fs.existsSync(customTileFile.path)) {
       fs.unlinkSync(customTileFile.path);
+    }
+    if (wallTileFile && fs.existsSync(wallTileFile.path)) {
+      fs.unlinkSync(wallTileFile.path);
     }
     
     res.status(500).json({ 
@@ -153,7 +186,7 @@ app.post('/api/visualize', upload.fields([
 });
 
 // Function to run Python visualization script
-async function runVisualization(roomImagePath, tileImageUrl, tileId) {
+async function runVisualization(roomImagePath, tileImageUrl, tileId, visualizationType = 'floor', wallTilePath = null) {
   return new Promise((resolve, reject) => {
     // Create a temporary directory for this request
     const tempDir = `temp_${Date.now()}_${Math.round(Math.random() * 1E9)}`;
@@ -161,15 +194,22 @@ async function runVisualization(roomImagePath, tileImageUrl, tileId) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const tileImagePath = path.join(tempDir, 'tile.jpg');
+    const tileImagePath = tileImageUrl ? path.join(tempDir, 'tile.jpg') : null;
+    const wallTileImagePath = wallTilePath ? path.join(tempDir, 'wall_tile.jpg') : null;
     
-    // Copy local tile image to temp directory
-    if (!fs.existsSync(tileImageUrl)) {
-      reject(new Error(`Tile image not found: ${tileImageUrl}`));
-      return;
+    // Copy local tile image to temp directory (only if floor tile is needed)
+    if (tileImageUrl) {
+      if (!fs.existsSync(tileImageUrl)) {
+        reject(new Error(`Tile image not found: ${tileImageUrl}`));
+        return;
+      }
+      fs.copyFileSync(tileImageUrl, tileImagePath);
     }
-    
-    fs.copyFileSync(tileImageUrl, tileImagePath);
+
+    // Copy wall tile image if provided
+    if (wallTilePath && fs.existsSync(wallTilePath)) {
+      fs.copyFileSync(wallTilePath, wallTileImagePath);
+    }
     
     // Read Replicate token from environment (do not hardcode)
     const replicateToken = process.env.REPLICATE_API_TOKEN;
@@ -194,38 +234,169 @@ if "REPLICATE_API_TOKEN" not in os.environ or not os.environ.get("REPLICATE_API_
 
 # Image paths - use absolute paths
 room_path = r"${roomImagePath.replace(/\\/g, '\\\\')}"
-tile_path = r"${tileImagePath.replace(/\\/g, '\\\\')}"
+${tileImagePath ? `tile_path = r"${tileImagePath.replace(/\\/g, '\\\\')}"` : 'tile_path = None'}
+${wallTileImagePath ? `wall_tile_path = r"${wallTileImagePath.replace(/\\/g, '\\\\')}"` : 'wall_tile_path = None'}
+visualization_type = "${visualizationType}"
 
 try:
     # No need for floor segmentation with nano-banana model
     print("Using nano-banana model for direct image processing...")
+    print(f"Visualization type: {visualization_type}")
+    print(f"Wall tile provided: {wall_tile_path is not None}")
 
     # Run Google Nano-Banana model
     print("Sending request to Replicate (google/nano-banana)...")
 
-    # Prompt for flooring replacement
-    prompt = (
-        "Perform a precise visual edit on the provided room photo: "
-        "identify only the floor area completely in the room, do not miss any part of the flooring and replace its material using the second image as the tile reference. "
-        "Preserve the exact camera perspective, room geometry, and proportions. "
-        "Do not alter walls, furniture, or lighting setup. "
-        "Do not stretch, distort, or alter the room dimensions in any way. "
-        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection so it matches the rest of the room seamlessly. "
-        "Use realistic material mapping and soft edge transitions to avoid visible cutouts or overpainting. "
-        "Keep it photorealistic, as if the tiles were actually installed."
-    )
+    # Determine prompt and image inputs based on visualization type
+    if wall_tile_path and visualization_type in ["walls", "both"]:
+        # Use combined prompt for floor + wall visualization
+        if visualization_type == "both":
+          prompt = (
 
-    # Prepare input data using local image files
-    with open(room_path, "rb") as room_file, open(tile_path, "rb") as tile_file:
-        input_data = {
-            "prompt": prompt,
-            "image_input": [room_file, tile_file] # Pass file objects here
-        }
+          "Execute a surgical, high-fidelity material replacement on the provided interior room photograph using: "
+          "The second image as the floor material reference, and "
+          "The third image as the wall material reference. "
+          "Goal: Replace only the visible floor plane and vertical wall surfaces. Preserve all non-masked elements — ceiling, furniture, decor, windows, lights, and reflections — perfectly intact. "
+          
+          "Step 1 — Floor Replacement (Geometry Critical): "
+          "Identify and mask ONLY the floor plane, rigorously excluding walls, furniture bases, and shadows.[1] "
+          "Apply the floor material texture (from image 2) enforcing strict **vanishing point alignment and accurate perspective scaling** of the pattern/grout lines. "
+          "Use **context-aware recognition** to integrate the new floor texture.[5] Maintain the realistic light direction and generate **accurate contact shadows** under all furniture.[6] "
+          "**Crucially, suppress all texture repetition or visible tiling artifacts** across the floor surface. "
+          
+          "Step 2 — Wall Replacement (Precision Critical): "
+          "Identify and mask ONLY the vertical wall surfaces. "
+          "Replace these with the wall material texture (from image 3). The new material must maintain the **original light gradients and tone mapping** of the wall planes.[6] "
+          "**Preserve all existing geometric boundaries** precisely near windows, door frames, and ceiling/floor junctions, enforced by ControlNet Canny edge guidance. "
 
-        output = replicate.run(
-            "google/nano-banana",
-            input=input_data
+          "Step 3 — Integration & Blending: "
+          "Ensure a seamless, **multi-level frequency blend** at all mask boundaries (edge-aware transition) to prevent harsh cut lines or bleed. "
+          "The final output must be **photorealistic and high-detail**, appearing as if both materials were physically installed with zero AI noise or geometric distortion.[12, 13]"
+      )
+
+        else:
+            # Walls only - use the high-precision prompt
+            prompt = (
+            "Execute a surgical, high-precision visual edit on the provided room photo using the second image as the wall material reference. "
+            "Objective: Replace ONLY the visible vertical wall surfaces in the room with the new material. Keep all other elements—ceiling, floor, furniture, windows, decor, and lighting—perfectly intact. "
+            "Instructions: "
+            "Identify and mask ONLY the wall regions (semantic segmentation).[1] "
+            "Maintain wall boundaries precisely, utilizing ControlNet Canny edge guidance to prevent structural warping near junctions. "
+            "Apply the new material ensuring it respects the **original lighting, shadows, and reflection properties** (especially for glossy tiles). "
+            "Use a **soft, feathered blending transition** along edges to eliminate haloing or bleed onto nearby objects (e.g., baseboards, ceiling).[10] "
+            "**Suppress all repetitive texture patterns or tiling artifacts**. "
+            "The final image must be **photorealistic and high-detail**, integrated perfectly with the original room geometry.[12]"
         )
+        
+        # Handle "both" visualization with 3 images (room, floor tile, wall tile)
+        if visualization_type == "both":
+            room_file = open(room_path, "rb")
+            tile_file = open(tile_path, "rb")
+            wall_file = open(wall_tile_path, "rb")
+            try:
+                input_data = {
+                    "prompt": prompt,
+                    "image_input": [room_file, tile_file, wall_file]  # Pass three file objects
+                }
+                
+                # Execute Replicate call with retries
+                output = None
+                attempts = 0
+                last_error = None
+                while attempts < 3 and output is None:
+                    try:
+                        output = replicate.run(
+                            "google/nano-banana",
+                            input=input_data
+                        )
+                    except Exception as e:
+                        last_error = e
+                        print(f"Warning: Replicate call failed (attempt {attempts+1}/3): {e}")
+                        import time
+                        time.sleep(2)
+                    finally:
+                        attempts += 1
+                if output is None:
+                    raise RuntimeError(f"Replicate call failed after retries: {last_error}")
+            finally:
+                room_file.close()
+                tile_file.close()
+                wall_file.close()
+        else:
+            # Walls only - use 2 images (room, wall tile)
+            room_file = open(room_path, "rb")
+            wall_file = open(wall_tile_path, "rb")
+            try:
+                input_data = {
+                    "prompt": prompt,
+                    "image_input": [room_file, wall_file]  # Pass two file objects (room + wall tile)
+                }
+                
+                # Execute Replicate call with retries
+                output = None
+                attempts = 0
+                last_error = None
+                while attempts < 3 and output is None:
+                    try:
+                        output = replicate.run(
+                            "google/nano-banana",
+                            input=input_data
+                        )
+                    except Exception as e:
+                        last_error = e
+                        print(f"Warning: Replicate call failed (attempt {attempts+1}/3): {e}")
+                        import time
+                        time.sleep(2)
+                    finally:
+                        attempts += 1
+                if output is None:
+                    raise RuntimeError(f"Replicate call failed after retries: {last_error}")
+            finally:
+                room_file.close()
+                wall_file.close()
+    else:
+        # Floor only - original prompt
+        prompt = (
+        "Perform a surgical, precise visual edit on the provided room photo: "
+        "Identify and mask ONLY the floor area (semantic segmentation) [1], ensuring 100% coverage of the visible floor plane. "
+        "Replace the flooring material using the second image as the tile reference. "
+        "The new material must enforce strict **vanishing point alignment and accurate perspective scaling** for the pattern/grout lines. "
+        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection. Anchor all furniture with **realistic contact shadows**.[6] "
+        "**Suppress all repetitive texture patterns or visible tiling artifacts**. "
+        "Do not alter walls, furniture, ceiling, or lighting setup. "
+        "Keep the result **photorealistic and high-detail**, looking physically installed with seamless, soft edge transitions.[10, 12]"
+    )
+        
+        room_file = open(room_path, "rb")
+        tile_file = open(tile_path, "rb")
+        try:
+            input_data = {
+                "prompt": prompt,
+                "image_input": [room_file, tile_file]  # Pass file objects here
+            }
+            
+            # Execute Replicate call with retries
+            output = None
+            attempts = 0
+            last_error = None
+            while attempts < 3 and output is None:
+                try:
+                    output = replicate.run(
+                        "google/nano-banana",
+                        input=input_data
+                    )
+                except Exception as e:
+                    last_error = e
+                    print(f"Warning: Replicate call failed (attempt {attempts+1}/3): {e}")
+                    import time
+                    time.sleep(2)
+                finally:
+                    attempts += 1
+            if output is None:
+                raise RuntimeError(f"Replicate call failed after retries: {last_error}")
+        finally:
+            room_file.close()
+            tile_file.close()
 
     print("Raw Replicate Output:", output)
 
@@ -255,9 +426,21 @@ try:
     # Resize output image to match original room image dimensions EXACTLY
     if output_url:
         try:
-            # Download the generated image
+            # Download the generated image with simple retries
             import requests
-            response = requests.get(output_url)
+            session = requests.Session()
+            response = None
+            for i in range(3):
+                try:
+                    response = session.get(output_url, timeout=30)
+                    response.raise_for_status()
+                    break
+                except Exception as e:
+                    if i == 2:
+                        raise
+                    print(f"Warning: image download failed (attempt {i+1}/3): {e}")
+                    import time
+                    time.sleep(2)
             generated_img = Image.open(io.BytesIO(response.content))
             
             # Get original room image dimensions and orientation

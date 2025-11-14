@@ -6,6 +6,8 @@ import Header from "@/components/Header";
 import UploadArea from "@/components/UploadArea";
 import TileGallery, { TileSKU } from "@/components/TileGallery";
 import VisualizationResult from "@/components/VisualizationResult";
+import VisualizationTypeSelector, { VisualizationType } from "@/components/VisualizationTypeSelector";
+import WallTileUpload from "@/components/WallTileUpload";
 import { toast } from "sonner";
 import { Sparkles, AlertCircle } from "lucide-react";
 import { VisualizationService } from "@/services/visualizationService";
@@ -15,6 +17,9 @@ const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedTile, setSelectedTile] = useState<TileSKU | null>(null);
+  const [visualizationType, setVisualizationType] = useState<VisualizationType>("floor");
+  const [wallTileFile, setWallTileFile] = useState<File | null>(null);
+  const [wallTilePreview, setWallTilePreview] = useState<string | null>(null);
   const [isVisualizing, setIsVisualizing] = useState(false);
   const [visualizedImage, setVisualizedImage] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -54,10 +59,58 @@ const Index = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleVisualize = async () => {
-    if (!selectedFile || !selectedTile) {
-      toast.error("Please upload a room image and select a tile");
+  const handleWallTileSelect = (file: File | null) => {
+    if (!file) {
+      setWallTileFile(null);
+      setWallTilePreview(null);
       return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload a valid image file (JPG or PNG)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setWallTileFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setWallTilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVisualize = async () => {
+    if (!selectedFile) {
+      toast.error("Please upload a room image");
+      return;
+    }
+
+    // Validate based on visualization type
+    if (visualizationType === "walls") {
+      if (!wallTileFile) {
+        toast.error("Please upload a wall tile image for wall visualization");
+        return;
+      }
+    } else if (visualizationType === "both") {
+      if (!selectedTile) {
+        toast.error("Please select a floor tile");
+        return;
+      }
+      if (!wallTileFile) {
+        toast.error("Please upload a wall tile image");
+        return;
+      }
+    } else {
+      // Floor only
+      if (!selectedTile) {
+        toast.error("Please select a floor tile");
+        return;
+      }
     }
 
     if (serverStatus !== 'online') {
@@ -71,8 +124,10 @@ const Index = () => {
     try {
       const result = await VisualizationService.visualizeRoom({
         roomImage: selectedFile,
-        tileId: selectedTile.id,
-        customTileFile: selectedTile.isCustom ? selectedTile.file : undefined
+        tileId: visualizationType === "walls" ? "walls-only" : selectedTile.id, // Dummy tile ID for walls-only
+        customTileFile: visualizationType === "walls" ? undefined : (selectedTile?.isCustom ? selectedTile.file : undefined),
+        visualizationType: visualizationType,
+        wallTileFile: wallTileFile || undefined
       });
 
       if (result.success) {
@@ -100,6 +155,9 @@ const Index = () => {
     setSelectedFile(null);
     setPreview(null);
     setSelectedTile(null);
+    setVisualizationType("floor");
+    setWallTileFile(null);
+    setWallTilePreview(null);
     setShowResult(false);
     setVisualizedImage(null);
   };
@@ -138,15 +196,35 @@ const Index = () => {
             </div>
 
             {preview && (
-              <div className="animate-fade-in">
+              <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+                <VisualizationTypeSelector
+                  value={visualizationType}
+                  onChange={setVisualizationType}
+                />
+
                 <TileGallery
                   onTileSelect={setSelectedTile}
                   selectedTile={selectedTile}
                 />
+
+                {(visualizationType === "walls" || visualizationType === "both") && (
+                  <div className="animate-fade-in">
+                    <WallTileUpload
+                      onFileSelect={handleWallTileSelect}
+                      selectedFile={wallTileFile}
+                      preview={wallTilePreview}
+                      required={true}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
-            {preview && selectedTile && (
+            {preview && (
+              (visualizationType === "walls" && wallTileFile) ||
+              (visualizationType === "both" && selectedTile && wallTileFile) ||
+              (visualizationType === "floor" && selectedTile)
+            ) && (
               <div className="flex flex-col items-center gap-4 animate-fade-in">
                 {serverStatus === 'offline' && (
                   <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-4 py-2 rounded-lg">
