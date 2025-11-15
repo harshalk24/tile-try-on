@@ -244,6 +244,69 @@ try:
     print(f"Visualization type: {visualization_type}")
     print(f"Wall tile provided: {wall_tile_path is not None}")
 
+    # Function to apply EXIF orientation correction
+    def apply_exif_orientation(img):
+        """Apply EXIF orientation to image if present"""
+        try:
+            # Method 1: Try using PIL's ImageOps.exif_transpose (PIL 8.0+)
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+                print("Applied EXIF orientation using ImageOps.exif_transpose")
+                return img
+            except (ImportError, AttributeError):
+                pass
+            
+            # Method 2: Manual EXIF orientation handling (fallback)
+            try:
+                exif = img._getexif()
+                if exif is not None:
+                    # Try different methods to get orientation tag
+                    orientation = None
+                    # Direct tag number (274 is the orientation tag)
+                    if 274 in exif:
+                        orientation = exif[274]
+                    # Try using ExifTags
+                    else:
+                        try:
+                            from PIL.ExifTags import ORIENTATION
+                            orientation = exif.get(ORIENTATION)
+                        except (ImportError, AttributeError, KeyError):
+                            pass
+                    
+                    if orientation:
+                        print(f"Found EXIF orientation: {orientation}")
+                        if orientation == 2:
+                            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                        elif orientation == 3:
+                            img = img.rotate(180, expand=True)
+                        elif orientation == 4:
+                            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+                        elif orientation == 5:
+                            img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+                        elif orientation == 6:
+                            img = img.rotate(-90, expand=True)
+                        elif orientation == 7:
+                            img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+                        elif orientation == 8:
+                            img = img.rotate(90, expand=True)
+            except (AttributeError, KeyError, TypeError):
+                pass
+        except Exception as e:
+            print(f"No EXIF orientation data or error reading it: {e}")
+        return img
+
+    # Load and correct orientation of room image BEFORE processing
+    print("Loading and correcting room image orientation...")
+    room_img = Image.open(room_path)
+    room_img = apply_exif_orientation(room_img)
+    
+    # Save the corrected room image to a temporary file
+    corrected_room_path = os.path.join(tempfile.gettempdir(), f"corrected_room_{int(time.time() * 1000)}.jpg")
+    room_img.save(corrected_room_path, 'JPEG', quality=95)
+    room_path = corrected_room_path
+    print(f"Corrected room image saved to: {room_path}")
+
     # Run Google Nano-Banana model
     print("Sending request to Replicate (google/nano-banana)...")
 
@@ -277,15 +340,17 @@ try:
         else:
             # Walls only - use the high-precision prompt
             prompt = (
-            "Execute a surgical, high-precision visual edit on the provided room photo using the second image as the wall material reference. "
-            "Objective: Replace ONLY the visible vertical wall surfaces in the room with the new material. Keep all other elements—ceiling, floor, furniture, windows, decor, and lighting—perfectly intact. "
+            "Execute a surgical, high-precision visual edit on the provided room photo using the second image as the wall material reference."
+
+            "Objective: Replace ONLY the visible vertical wall surfaces in the room with the new material, covering the ENTIRE continuous wall plane with no gaps or partial edits. Keep all other elements—ceiling, floor, furniture, windows, decor, ducting, and lighting—perfectly intact."
+
             "Instructions: "
-            "Identify and mask ONLY the wall regions (semantic segmentation).[1] "
-            "Maintain wall boundaries precisely, utilizing ControlNet Canny edge guidance to prevent structural warping near junctions. "
-            "Apply the new material ensuring it respects the **original lighting, shadows, and reflection properties** (especially for glossy tiles). "
-            "Use a **soft, feathered blending transition** along edges to eliminate haloing or bleed onto nearby objects (e.g., baseboards, ceiling).[10] "
-            "**Suppress all repetitive texture patterns or tiling artifacts**. "
-            "The final image must be **photorealistic and high-detail**, integrated perfectly with the original room geometry.[12]"
+            "Identify and mask ONLY the true wall regions (semantic segmentation), including all connected vertical planes even if lighting varies or corners create low-contrast boundaries. Do NOT leave any portion of the wall unedited."
+            "Maintain extremely precise wall boundaries, ensuring no spillover onto ceiling, floor, windows, trim, or furniture. Respect the original architectural layout—do NOT invent new walls or expand existing ones."
+            "Apply the new wall material with correct perspective alignment, scale, and vanishing point coherence. Preserve the original lighting, shadows, reflections, and depth cues so the material integrates naturally."
+            "Use a soft, feathered blending transition along all edges to eliminate haloing, masking noise, or bleed onto nearby objects. Preserve sharp edges where the wall meets windows, pillars, or ceiling lines."
+            "Suppress all repetitive texture patterns, tiling artifacts, noise, and overpainting errors. Ensure the applied texture remains clean, realistic, and consistent across the full wall surface."
+            "The final result must be photorealistic, high-detail, and perfectly integrated with the original room geometry—appearing as if the new wall material was physically installed."
         )
         
         # Handle "both" visualization with 3 images (room, floor tile, wall tile)
@@ -443,28 +508,12 @@ try:
                     time.sleep(2)
             generated_img = Image.open(io.BytesIO(response.content))
             
-            # Get original room image dimensions and orientation
+            # Get original room image dimensions (already corrected for orientation)
+            # Use the corrected room image that was saved earlier
             original_img = Image.open(room_path)
             original_size = original_img.size
             
-            # Handle EXIF orientation for original image
-            try:
-                from PIL.ExifTags import ORIENTATION
-                exif = original_img._getexif()
-                if exif is not None:
-                    orientation = exif.get(ORIENTATION)
-                    if orientation == 3:
-                        original_img = original_img.rotate(180, expand=True)
-                    elif orientation == 6:
-                        original_img = original_img.rotate(270, expand=True)
-                    elif orientation == 8:
-                        original_img = original_img.rotate(90, expand=True)
-                    original_size = original_img.size
-            except (AttributeError, KeyError, TypeError):
-                # No EXIF data or orientation info
-                pass
-            
-            print(f"Original image size: {original_size}")
+            print(f"Original image size (after orientation correction): {original_size}")
             print(f"Generated image size: {generated_img.size}")
             
             # ALWAYS resize to match original dimensions exactly
@@ -483,8 +532,9 @@ try:
             # Ensure the public directory exists
             os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
             
-            # Save with proper orientation (remove EXIF to prevent rotation issues)
-            generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True)
+            # Save with proper orientation (save without EXIF to prevent double rotation)
+            # The image is already correctly oriented, so we save it as-is
+            generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True, exif=b'')
             
             # Return the local path that can be served by the web server
             # Use the same origin as the request to avoid hardcoded localhost
