@@ -317,36 +317,25 @@ try:
         if visualization_type == "both":
           prompt = (
 
-          "Execute a clean, structurally-accurate visual edit on the provided room photo using the second image as the wall material reference."
+          "Execute a surgical, high-fidelity material replacement on the provided interior room photograph using: "
+          "The second image as the floor material reference, and "
+          "The third image as the wall material reference. "
+          "Goal: Replace only the visible floor plane and vertical wall surfaces. Preserve all non-masked elements — ceiling, furniture, decor, windows, lights, and reflections — perfectly intact. "
+          
+          "Step 1 — Floor Replacement (Geometry Critical): "
+          "Identify and mask ONLY the floor plane, rigorously excluding walls, furniture bases, and shadows.[1] "
+          "Apply the floor material texture (from image 2) enforcing strict **vanishing point alignment and accurate perspective scaling** of the pattern/grout lines. "
+          "Use **context-aware recognition** to integrate the new floor texture.[5] Maintain the realistic light direction and generate **accurate contact shadows** under all furniture.[6] "
+          "**Crucially, suppress all texture repetition or visible tiling artifacts** across the floor surface. "
+          
+          "Step 2 — Wall Replacement (Precision Critical): "
+          "Identify and mask ONLY the vertical wall surfaces. "
+          "Replace these with the wall material texture (from image 3). The new material must maintain the **original light gradients and tone mapping** of the wall planes.[6] "
+          "**Preserve all existing geometric boundaries** precisely near windows, door frames, and ceiling/floor junctions, enforced by ControlNet Canny edge guidance. "
 
-          "Your task is to replace ONLY the true, vertical wall surfaces in the room."
-          "Do NOT modify, distort, wrap, or repaint any other elements."
-
-          "STRICT rules:"
-          "• Replace ONLY the flat, vertical wall planes."
-          "• Do NOT alter the ceiling, floor, ducts, beams, columns, furniture, windows, curtains, posters, glass, trim, banners, or sharp architectural edges. "
-          "• Do NOT extend the wall texture onto corners, edges, ceiling lines, or any object touching the wall. "
-          "• Do NOT create new walls or fill negative spaces. "
-
-          "Wall detection rules:"
-          "• Identify the continuous vertical planes even if shadows, gradients, or lighting variations make them appear uneven." 
-          "• Preserve the original wall boundaries EXACTLY as they are."  
-          "• Maintain the original wall shape, thickness, and proportions without stretching or warping."
-
-          "Texture application rules:"
-          "• Apply the new material with correct perspective so it lies perfectly flat on the wall surface."
-          "• Keep tile scale consistent—NO stretching, NO skewing, NO curvature."
-          "• Match existing lighting direction, shadow softness, ambient color, and wall reflectivity."
-          "• Avoid noise, overpainting, or bleeding into objects near the wall (chairs, vents, ducts, shelves, frames, pipes, electrical boxes)."
-
-          "Edge preservation:"
-          "• Preserve all hard architectural edges (wall-ceiling line, wall-floor line, wall-window edges)."
-          "• Use VERY soft feathering ONLY inside the boundary, not outside it."
-
-          "Quality requirements:"
-          "• No distortion of ceiling ducts, lights, beams, or room geometry."
-          "• No blurring, no loss of detail, no messy patterns near edges."
-          "• Final result must look realistic, clean, and structurally accurate—like the wall was professionally re-finished without touching the rest of the room."
+          "Step 3 — Integration & Blending: "
+          "Ensure a seamless, **multi-level frequency blend** at all mask boundaries (edge-aware transition) to prevent harsh cut lines or bleed. "
+          "The final output must be **photorealistic and high-detail**, appearing as if both materials were physically installed with zero AI noise or geometric distortion.[12, 13]"
 
       )
 

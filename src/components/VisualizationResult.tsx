@@ -17,6 +17,7 @@ const VisualizationResult = ({
   onBack 
 }: VisualizationResultProps) => {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [viewMode, setViewMode] = useState<"before" | "after">("after");
 
   // Load original image to get its dimensions
   useEffect(() => {
@@ -29,6 +30,13 @@ const VisualizationResult = ({
     };
     img.src = originalImage;
   }, [originalImage]);
+
+  // Reset to "after" view when visualization completes
+  useEffect(() => {
+    if (visualizedImage && !isLoading) {
+      setViewMode("after");
+    }
+  }, [visualizedImage, isLoading]);
 
   const handleDownload = () => {
     if (visualizedImage) {
@@ -54,8 +62,9 @@ const VisualizationResult = ({
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Your Visualization</h2>
+      {/* Centered Header */}
+      <div className="flex flex-col items-center gap-4">
+        <h2 className="text-3xl font-bold text-center">Your Visualization</h2>
         {visualizedImage && !isLoading && (
           <Button onClick={handleDownload} className="gap-2 rounded-full bg-primary">
             <Download className="h-4 w-4" />
@@ -64,62 +73,88 @@ const VisualizationResult = ({
         )}
       </div>
 
-      <div className="flex justify-center">
-        <div className="grid md:grid-cols-2 gap-8 items-start w-full max-w-7xl">
-          <div className="space-y-3 flex flex-col">
-            <h3 className="text-lg font-semibold text-muted-foreground">Before</h3>
-            <div 
-              className="rounded-2xl overflow-hidden shadow-medium border border-border w-full"
-              style={getContainerStyle()}
+      {/* Toggle Buttons */}
+      {visualizedImage && !isLoading && (
+        <div className="flex justify-center">
+          <div className="flex items-center bg-[#4A4A4A] rounded-md p-0.5 gap-0.5">
+            <button
+              onClick={() => setViewMode("before")}
+              className={`px-4 py-2 rounded-md transition-all flex items-center gap-1.5 text-sm ${
+                viewMode === "before"
+                  ? "bg-[#2B2B2B] text-white"
+                  : "text-white/80 hover:text-white"
+              }`}
             >
-              {imageDimensions ? (
-                <img
-                  src={originalImage}
-                  alt="Original room"
-                  className="w-full h-full object-cover"
-                  style={{ display: 'block', margin: 0, padding: 0 }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              {viewMode === "before" && (
+                <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5 text-[#2B2B2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
               )}
-            </div>
-          </div>
-
-          <div className="space-y-3 flex flex-col">
-            <h3 className="text-lg font-semibold text-muted-foreground">After</h3>
-            <div 
-              className="rounded-2xl overflow-hidden shadow-medium border border-border w-full"
-              style={getContainerStyle()}
+              Before
+            </button>
+            <button
+              onClick={() => setViewMode("after")}
+              className={`px-4 py-2 rounded-md transition-all flex items-center gap-1.5 text-sm ${
+                viewMode === "after"
+                  ? "bg-[#2B2B2B] text-white"
+                  : "text-white/80 hover:text-white"
+              }`}
             >
-              {isLoading ? (
-                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
-                  <div className="text-center space-y-4 p-8">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                    <div>
-                      <p className="font-semibold text-lg">Processing your visualization...</p>
-                      <p className="text-sm text-muted-foreground">This may take a few moments</p>
-                    </div>
+              {viewMode === "after" && (
+                <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5 text-[#2B2B2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+              After
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Single Image Display */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-7xl">
+          <div 
+            className="rounded-2xl overflow-hidden shadow-medium border border-border w-full mx-auto"
+            style={getContainerStyle()}
+          >
+            {isLoading ? (
+              <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
+                <div className="text-center space-y-4 p-8">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                  <div>
+                    <p className="font-semibold text-lg">Processing your visualization...</p>
+                    <p className="text-sm text-muted-foreground">This may take a few moments</p>
                   </div>
                 </div>
-              ) : visualizedImage && imageDimensions ? (
-                <img
-                  src={visualizedImage}
-                  alt="Visualized room"
-                  className="w-full h-full object-cover animate-scale-in"
-                  style={{ display: 'block', margin: 0, padding: 0 }}
-                />
-              ) : visualizedImage ? (
-                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
-                  <p className="text-muted-foreground">No result yet</p>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : viewMode === "before" && imageDimensions ? (
+              <img
+                src={originalImage}
+                alt="Original room"
+                className="w-full h-full object-contain animate-scale-in"
+                style={{ display: 'block', margin: 0, padding: 0 }}
+              />
+            ) : visualizedImage && imageDimensions ? (
+              <img
+                src={visualizedImage}
+                alt="Visualized room"
+                className="w-full h-full object-contain animate-scale-in"
+                style={{ display: 'block', margin: 0, padding: 0 }}
+              />
+            ) : visualizedImage ? (
+              <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
+                <p className="text-muted-foreground">No result yet</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -12,15 +12,15 @@ const TileCard = ({ tile, isSelected, onClick }: TileCardProps) => {
     <div
       onClick={onClick}
       className={`
-        group relative cursor-pointer rounded-2xl overflow-hidden
-        transition-all duration-300 bg-card
+        group relative cursor-pointer rounded-lg overflow-hidden
+        transition-all duration-300 bg-card aspect-square
         ${isSelected 
-          ? "ring-2 ring-primary shadow-large scale-[1.02]" 
-          : "ring-1 ring-border hover:ring-primary/40 hover:shadow-medium"
+          ? "ring-2 ring-[#FF6B35] shadow-md" 
+          : "ring-1 ring-[#E6E6E6] hover:ring-[#FF6B35]/40"
         }
       `}
     >
-      <div className="aspect-square overflow-hidden bg-muted">
+      <div className="w-full h-full overflow-hidden bg-muted">
         <img
           src={tile.image}
           alt={tile.name}
@@ -29,17 +29,20 @@ const TileCard = ({ tile, isSelected, onClick }: TileCardProps) => {
       </div>
       
       {isSelected && (
-        <div className="absolute top-3 right-3 bg-primary rounded-full p-1.5 animate-scale-in shadow-medium">
-          <Check className="h-4 w-4 text-primary-foreground" />
+        <div className="absolute top-1 right-1 bg-[#FF6B35] rounded-full p-1 animate-scale-in shadow-md">
+          <Check className="h-3 w-3 text-white" />
         </div>
       )}
 
-      <div className="p-4 space-y-1">
-        <p className="font-semibold text-sm">{tile.name}</p>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{tile.size}"</span>
-          {tile.price && <span className="font-medium">{tile.price}</span>}
-        </div>
+      {/* Heart icon for favorites - similar to reference */}
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isSelected && (
+          <div className="bg-white/80 rounded-full p-1">
+            <svg className="h-3 w-3 text-[#6B6B6B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
