@@ -40,24 +40,44 @@ app.get('/temp_resized_*', (req, res) => {
     }
   }
   
-  console.log('='.repeat(60));
-  console.log('Serving resized image (nano-banana output):');
-  console.log('  Requested path:', req.path);
-  console.log('  Requested filename:', filename);
-  console.log('  __dirname:', __dirname);
-  console.log('  process.cwd():', process.cwd());
-  console.log('  Tried paths:');
+  const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  console.log('\n' + '='.repeat(80));
+  console.log(`[${requestId}] IMAGE REQUEST RECEIVED`);
+  console.log('='.repeat(80));
+  console.log(`[${requestId}] Timestamp:`, new Date().toISOString());
+  console.log(`[${requestId}] Requested path:`, req.path);
+  console.log(`[${requestId}] Requested filename:`, filename);
+  console.log(`[${requestId}] Full URL:`, req.url);
+  console.log(`[${requestId}] __dirname:`, __dirname);
+  console.log(`[${requestId}] process.cwd():`, process.cwd());
+  console.log(`[${requestId}] Tried paths:`);
   possiblePaths.forEach((p, i) => {
-    console.log(`    ${i + 1}. ${p} - ${fs.existsSync(p) ? 'EXISTS' : 'NOT FOUND'}`);
+    const exists = fs.existsSync(p);
+    console.log(`[${requestId}]   ${i + 1}. ${p}`);
+    console.log(`[${requestId}]      → ${exists ? '✓ EXISTS' : '✗ NOT FOUND'}`);
+    if (exists) {
+      try {
+        const stats = fs.statSync(p);
+        console.log(`[${requestId}]      → Size: ${stats.size} bytes`);
+        console.log(`[${requestId}]      → Modified: ${stats.mtime}`);
+      } catch (e) {
+        console.error(`[${requestId}]      → Error reading stats:`, e.message);
+      }
+    }
   });
-  console.log('  Selected path:', resizedPath);
+  console.log(`[${requestId}] Selected path:`, resizedPath);
   if (resizedPath) {
-    const stats = fs.statSync(resizedPath);
-    console.log('  File size:', stats.size, 'bytes');
-    console.log('  File created:', stats.birthtime);
-    console.log('  File modified:', stats.mtime);
+    try {
+      const stats = fs.statSync(resizedPath);
+      console.log(`[${requestId}] ✓ File verified:`);
+      console.log(`[${requestId}]   Size:`, stats.size, 'bytes');
+      console.log(`[${requestId}]   Created:`, stats.birthtime);
+      console.log(`[${requestId}]   Modified:`, stats.mtime);
+    } catch (e) {
+      console.error(`[${requestId}] ✗ Error reading file stats:`, e.message);
+    }
   }
-  console.log('='.repeat(60));
+  console.log('='.repeat(80));
   
   if (resizedPath && fs.existsSync(resizedPath)) {
     // Set aggressive cache headers to prevent caching of generated images
@@ -148,6 +168,22 @@ app.post('/api/visualize', upload.fields([
   { name: 'customTileFile', maxCount: 1 },
   { name: 'wallTileFile', maxCount: 1 }
 ]), async (req, res) => {
+  const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  console.log('\n' + '='.repeat(80));
+  console.log(`[${requestId}] NEW VISUALIZATION REQUEST RECEIVED`);
+  console.log('='.repeat(80));
+  console.log(`[${requestId}] Timestamp: ${new Date().toISOString()}`);
+  console.log(`[${requestId}] Request body:`, {
+    tileId: req.body.tileId,
+    visualizationType: req.body.visualizationType,
+    renderImagePath: req.body.renderImagePath,
+    hasRoomImage: !!req.files?.roomImage,
+    hasCustomTileFile: !!req.files?.customTileFile,
+    hasWallTileFile: !!req.files?.wallTileFile
+  });
+  console.log(`[${requestId}] __dirname:`, __dirname);
+  console.log(`[${requestId}] process.cwd():`, process.cwd());
+  console.log(`[${requestId}] REPLICATE_API_TOKEN set:`, !!process.env.REPLICATE_API_TOKEN);
   try {
     const roomImage = req.files?.roomImage?.[0];
     const customTileFile = req.files?.customTileFile?.[0];
@@ -385,7 +421,7 @@ app.post('/api/visualize', upload.fields([
 });
 
 // Function to run Python visualization script
-async function runVisualization(roomImagePath, tileImageUrl, tileId, visualizationType = 'floor', wallTilePath = null) {
+async function runVisualization(roomImagePath, tileImageUrl, tileId, visualizationType = 'floor', wallTilePath = null, requestId = 'unknown') {
   return new Promise((resolve, reject) => {
     // Create a temporary directory for this request
     const tempDir = `temp_${Date.now()}_${Math.round(Math.random() * 1E9)}`;
@@ -823,11 +859,14 @@ try:
             print("=" * 60)
             print("FINAL OUTPUT - NANO-BANANA GENERATED IMAGE:")
             print(f"  Source: Replicate nano-banana model")
-            print(f"  Original Replicate URL: {output_url} (before download)")
-            print(f"  Resized to match original: {original_size}")
-            print(f"  Saved to: {public_resized_path}")
+            print(f"  Saved file path: {public_resized_path}")
+            print(f"  File exists: {os.path.exists(public_resized_path)}")
             print(f"  File size: {saved_size} bytes")
+            print(f"  Resized to match original: {original_size}")
             print(f"  RESULT_URL: {output_url}")
+            print(f"  SERVER_ROOT: {server_root}")
+            print(f"  Public directory: {public_dir}")
+            print(f"  Current working directory: {os.getcwd()}")
             print("=" * 60)
                 
         except Exception as resize_error:
@@ -858,15 +897,25 @@ except Exception as e:
         const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
         
         // Enhanced logging for EC2 debugging
-        console.log('='.repeat(60));
-        console.log('Executing Python visualization script:');
-        console.log('  Python command:', pythonCommand);
-        console.log('  Script path:', scriptPath);
-        console.log('  REPLICATE_API_TOKEN set:', !!replicateToken);
-        console.log('  SERVER_ROOT:', __dirname);
-        console.log('  Platform:', process.platform);
-        console.log('  Node version:', process.version);
-        console.log('='.repeat(60));
+        console.log(`[${requestId}] ` + '='.repeat(60));
+        console.log(`[${requestId}] Executing Python visualization script:`);
+        console.log(`[${requestId}]   Python command:`, pythonCommand);
+        console.log(`[${requestId}]   Script path:`, scriptPath);
+        console.log(`[${requestId}]   Script exists:`, fs.existsSync(scriptPath));
+        console.log(`[${requestId}]   REPLICATE_API_TOKEN set:`, !!replicateToken);
+        console.log(`[${requestId}]   REPLICATE_API_TOKEN length:`, replicateToken ? replicateToken.length : 0);
+        console.log(`[${requestId}]   SERVER_ROOT:`, __dirname);
+        console.log(`[${requestId}]   Platform:`, process.platform);
+        console.log(`[${requestId}]   Node version:`, process.version);
+        console.log(`[${requestId}]   Room image path:`, roomImagePath);
+        console.log(`[${requestId}]   Room image exists:`, fs.existsSync(roomImagePath));
+        console.log(`[${requestId}]   Tile image path:`, tileImageUrl);
+        console.log(`[${requestId}]   Tile image exists:`, tileImageUrl ? fs.existsSync(tileImageUrl) : 'N/A');
+        if (wallTilePath) {
+          console.log(`[${requestId}]   Wall tile path:`, wallTilePath);
+          console.log(`[${requestId}]   Wall tile exists:`, fs.existsSync(wallTilePath));
+        }
+        console.log(`[${requestId}] ` + '='.repeat(60));
         
         const python = spawn(pythonCommand, [scriptPath], {
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -886,20 +935,18 @@ except Exception as e:
         let output = '';
         let errorOutput = '';
         
-        // Log Python command for debugging
-        console.log('Running Python script:');
-        console.log('  Command:', pythonCommand, scriptPath);
-        console.log('  REPLICATE_API_TOKEN set:', !!replicateToken);
-        console.log('  SERVER_ROOT:', __dirname);
+        // Additional logging (redundant but kept for compatibility)
 
         python.stdout.on('data', (data) => {
-          output += data.toString();
-          console.log('Python output:', data.toString());
+          const dataStr = data.toString();
+          output += dataStr;
+          console.log(`[${requestId}] [PYTHON STDOUT]`, dataStr);
         });
 
         python.stderr.on('data', (data) => {
-          errorOutput += data.toString();
-          console.error('Python error:', data.toString());
+          const dataStr = data.toString();
+          errorOutput += dataStr;
+          console.error(`[${requestId}] [PYTHON STDERR]`, dataStr);
         });
 
         python.on('close', (code) => {
@@ -922,8 +969,9 @@ except Exception as e:
 
           if (code !== 0) {
             // Log full output for debugging
-            console.error('Python script failed. Full output:', output);
-            console.error('Python script error output:', errorOutput);
+            console.error(`[${requestId}] ✗ Python script failed with exit code:`, code);
+            console.error(`[${requestId}] Full output:`, output);
+            console.error(`[${requestId}] Error output:`, errorOutput);
             reject(new Error(`Python script failed with code ${code}: ${errorOutput || output || 'Unknown error'}`));
             return;
           }
@@ -932,8 +980,31 @@ except Exception as e:
           const resultMatch = output.match(/RESULT_URL:(.+)/);
           if (resultMatch) {
             const imageUrl = resultMatch[1].trim();
-            console.log('✓ Extracted RESULT_URL from Python output:', imageUrl);
-            console.log('✓ This is the nano-banana generated image from server.js');
+            console.log(`[${requestId}] ✓ Extracted RESULT_URL from Python output:`, imageUrl);
+            console.log(`[${requestId}] ✓ This is the real-time nano-banana generated image from server.js`);
+            
+            // Verify the file actually exists
+            const possibleImagePaths = [
+              path.join(__dirname, 'public', imageUrl.substring(1)),
+              path.join(process.cwd(), 'public', imageUrl.substring(1)),
+            ];
+            
+            let imageExists = false;
+            for (const imgPath of possibleImagePaths) {
+              if (fs.existsSync(imgPath)) {
+                const stats = fs.statSync(imgPath);
+                console.log(`[${requestId}] ✓ Image file verified at:`, imgPath);
+                console.log(`[${requestId}]   File size:`, stats.size, 'bytes');
+                imageExists = true;
+                break;
+              }
+            }
+            
+            if (!imageExists) {
+              console.error(`[${requestId}] ⚠ WARNING: Image file not found at any expected path!`);
+              console.error(`[${requestId}]   Searched paths:`, possibleImagePaths);
+            }
+            
             resolve({ imageUrl: imageUrl });
           } else {
             // Enhanced error logging for EC2 debugging
