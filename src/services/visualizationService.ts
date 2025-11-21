@@ -91,15 +91,36 @@ export class VisualizationService {
 
       const result = await response.json();
       
-      // Convert relative URLs to absolute URLs
-      if (result.imageUrl && result.imageUrl.startsWith('/')) {
-        // The Python script already adds cache-busting, so just prepend the base URL
-        // Don't add another cache-buster to avoid double query params
-        result.imageUrl = API_BASE_URL + result.imageUrl;
+      // Handle image URL - keep relative paths as-is for same-origin requests
+      // On EC2, frontend and backend are on same origin, so relative paths work
+      // Only convert to absolute if explicitly needed (different origin)
+      if (result.imageUrl) {
+        if (result.imageUrl.startsWith('/')) {
+          // Relative path - check if we need to make it absolute
+          if (import.meta.env.DEV) {
+            // In dev, backend is on different port, so use full URL
+            result.imageUrl = API_BASE_URL + result.imageUrl;
+            console.log('✓ Dev mode: Using absolute URL:', result.imageUrl);
+          } else if (import.meta.env.VITE_API_BASE_URL) {
+            // Explicit API_BASE_URL set - use it
+            result.imageUrl = API_BASE_URL + result.imageUrl;
+            console.log('✓ Using explicit API_BASE_URL:', result.imageUrl);
+          } else {
+            // Production, same origin - keep relative path
+            // Browser will resolve it correctly from current origin
+            console.log('✓ Production: Using relative path (same origin):', result.imageUrl);
+            console.log('  Will resolve to:', typeof window !== 'undefined' ? window.location.origin + result.imageUrl : 'N/A');
+          }
+        } else if (result.imageUrl.startsWith('http')) {
+          // Already absolute URL - use as-is
+          console.log('✓ Already absolute URL:', result.imageUrl);
+        }
       }
       
       console.log('✓ Received visualization result from API:');
-      console.log('  Image URL:', result.imageUrl);
+      console.log('  Final Image URL:', result.imageUrl);
+      console.log('  API_BASE_URL:', API_BASE_URL);
+      console.log('  Mode:', import.meta.env.DEV ? 'DEV' : 'PROD');
       console.log('  This is the real-time nano-banana generated image');
       
       return result;

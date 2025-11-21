@@ -145,6 +145,24 @@ const VisualizationResult = ({
                 alt="Visualized room"
                 className="w-full h-full object-contain animate-scale-in"
                 style={{ display: 'block', margin: 0, padding: 0 }}
+                onError={(e) => {
+                  console.error('Image load error:', {
+                    src: visualizedImage,
+                    error: e,
+                    currentSrc: e.currentTarget.currentSrc,
+                    naturalWidth: e.currentTarget.naturalWidth,
+                    naturalHeight: e.currentTarget.naturalHeight
+                  });
+                  // Try to reload or show error
+                  const img = e.currentTarget;
+                  const originalSrc = img.src;
+                  console.log('Attempting to reload image from:', originalSrc);
+                  // Force reload by adding timestamp
+                  img.src = originalSrc + (originalSrc.includes('?') ? '&' : '?') + '_retry=' + Date.now();
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', visualizedImage);
+                }}
               />
             ) : visualizedImage ? (
               <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '200px' }}>
