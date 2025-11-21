@@ -17,6 +17,71 @@ const PORT = process.env.PORT || 3003;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// IMPORTANT: Register dynamic image route BEFORE static middleware
+// Serve the resized images (dynamic filenames) - these are nano-banana generated images
+app.get('/temp_resized_*', (req, res) => {
+  // Extract filename from path (remove query parameters)
+  const pathWithoutQuery = req.path.split('?')[0];
+  const filename = pathWithoutQuery.substring(1); // Remove leading slash
+  
+  // Try multiple path resolutions for EC2 compatibility
+  const possiblePaths = [
+    path.join(__dirname, 'public', filename),  // Standard path
+    path.join(process.cwd(), 'public', filename),  // Current working directory
+    path.resolve('public', filename),  // Relative to process.cwd()
+  ];
+  
+  let resizedPath = null;
+  for (const possiblePath of possiblePaths) {
+    if (fs.existsSync(possiblePath)) {
+      resizedPath = possiblePath;
+      break;
+    }
+  }
+  
+  console.log('='.repeat(60));
+  console.log('Serving resized image (nano-banana output):');
+  console.log('  Requested path:', req.path);
+  console.log('  Requested filename:', filename);
+  console.log('  __dirname:', __dirname);
+  console.log('  process.cwd():', process.cwd());
+  console.log('  Tried paths:');
+  possiblePaths.forEach((p, i) => {
+    console.log(`    ${i + 1}. ${p} - ${fs.existsSync(p) ? 'EXISTS' : 'NOT FOUND'}`);
+  });
+  console.log('  Selected path:', resizedPath);
+  if (resizedPath) {
+    const stats = fs.statSync(resizedPath);
+    console.log('  File size:', stats.size, 'bytes');
+    console.log('  File created:', stats.birthtime);
+    console.log('  File modified:', stats.mtime);
+  }
+  console.log('='.repeat(60));
+  
+  if (resizedPath && fs.existsSync(resizedPath)) {
+    // Set aggressive cache headers to prevent caching of generated images
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    res.setHeader('ETag', `"${Date.now()}"`);
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.sendFile(path.resolve(resizedPath));
+  } else {
+    console.error('ERROR: Resized image not found');
+    console.error('  Searched paths:', possiblePaths);
+    console.error('  Requested filename:', filename);
+    res.status(404).json({ 
+      error: 'Resized image not found', 
+      filename: filename,
+      searchedPaths: possiblePaths,
+      __dirname: __dirname,
+      cwd: process.cwd()
+    });
+  }
+});
+
 // Serve built frontend (Vite) if present
 app.use(express.static(path.join(__dirname, 'dist')));
 
@@ -76,41 +141,6 @@ app.get('/health', (req, res) => {
 
 // Serve static files from public directory
 app.use('/public', express.static(path.join(__dirname, 'public')));
-
-// Serve the resized images (dynamic filenames) - these are nano-banana generated images
-// Serve the resized images (dynamic filenames) - these are nano-banana generated images
-app.get('/temp_resized_*', (req, res) => {
-  // Extract filename from path (remove query parameters)
-  const pathWithoutQuery = req.path.split('?')[0];
-  const filename = pathWithoutQuery.substring(1); // Remove leading slash
-  const resizedPath = path.join(__dirname, 'public', filename);
-  
-  console.log('='.repeat(60));
-  console.log('Serving resized image (nano-banana output):');
-  console.log('  Requested filename:', filename);
-  console.log('  Full path:', resizedPath);
-  console.log('  File exists:', fs.existsSync(resizedPath));
-  if (fs.existsSync(resizedPath)) {
-    const stats = fs.statSync(resizedPath);
-    console.log('  File size:', stats.size, 'bytes');
-    console.log('  File created:', stats.birthtime);
-    console.log('  File modified:', stats.mtime);
-  }
-  console.log('='.repeat(60));
-  
-  if (fs.existsSync(resizedPath)) {
-    // Set aggressive cache headers to prevent caching of generated images
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Last-Modified', new Date().toUTCString());
-    res.setHeader('ETag', `"${Date.now()}"`);
-    res.sendFile(resizedPath);
-  } else {
-    console.error('ERROR: Resized image not found:', resizedPath);
-    res.status(404).json({ error: 'Resized image not found', filename: filename });
-  }
-});
 
 // Main visualization endpoint
 app.post('/api/visualize', upload.fields([
