@@ -18,9 +18,9 @@ const Header = ({ onBack, showBackButton = false }: HeaderProps) => {
             </Button>
           )}
           <img 
-            src="/logo/roommorph.ai logo.jpg" 
-            alt="RoomMorph.AI Logo" 
-            className="h-12 w-auto"
+            src="/logo/Nazaraa-logo.png" 
+            alt="Nazaraa Logo" 
+            className="h-20 w-auto"
           />
         </div>
       </div>

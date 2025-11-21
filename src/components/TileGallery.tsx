@@ -120,39 +120,24 @@ const TileGallery = ({ onTileSelect, selectedTile }: TileGalleryProps) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold mb-6">Choose Your Tile</h2>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search tiles..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 rounded-full border-2"
-          />
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* Custom Tile Upload Section */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <h3 className="text-xl font-semibold">Upload Custom Tile</h3>
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-sm font-semibold text-[#2B2B2B]">Upload Custom Tile</h3>
           {customTile && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={removeCustomTile}
-              className="gap-2"
+              className="h-6 w-6 p-0"
             >
-              <X className="h-4 w-4" />
-              Remove
+              <X className="h-3 w-3" />
             </Button>
           )}
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -162,19 +147,18 @@ const TileGallery = ({ onTileSelect, selectedTile }: TileGalleryProps) => {
           />
           <Button
             variant="outline"
+            size="sm"
             onClick={() => fileInputRef.current?.click()}
-            className="gap-2"
+            className="gap-1 text-xs h-7"
           >
-            <Upload className="h-4 w-4" />
-            Upload Tile Image
+            <Upload className="h-3 w-3" />
+            Upload
           </Button>
-          <span className="text-sm text-muted-foreground">
-            JPG, PNG up to 10MB
-          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-h-[600px] overflow-y-auto pr-2">
+      {/* Tile Grid - Compact for sidebar */}
+      <div className="grid grid-cols-3 gap-2 max-h-[calc(100vh-400px)] overflow-y-auto pr-1">
         {/* Show custom tile first if uploaded */}
         {customTile && (
           <TileCard
