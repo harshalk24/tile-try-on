@@ -42,7 +42,7 @@ const VisualizationResult = ({
     if (visualizedImage) {
       const link = document.createElement('a');
       link.href = visualizedImage;
-      link.download = 'roommorph-result.jpg';
+      link.download = 'nazaraa-result.jpg';
       link.click();
     }
   };

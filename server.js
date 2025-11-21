@@ -41,10 +41,19 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    // Check if it's an image by mimetype or extension
+    const isImage = file.mimetype.startsWith('image/') || 
+                    /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.originalname);
+    
+    if (isImage) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      console.error('File rejected:', {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        mimetype: file.mimetype
+      });
+      cb(new Error(`Only image files are allowed! Received: ${file.mimetype || 'unknown type'}`), false);
     }
   }
 });
@@ -68,14 +77,38 @@ app.get('/health', (req, res) => {
 // Serve static files from public directory
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Serve the resized images (dynamic filenames)
+// Serve the resized images (dynamic filenames) - these are nano-banana generated images
+// Serve the resized images (dynamic filenames) - these are nano-banana generated images
 app.get('/temp_resized_*', (req, res) => {
-  const filename = req.path.substring(1); // Remove leading slash
+  // Extract filename from path (remove query parameters)
+  const pathWithoutQuery = req.path.split('?')[0];
+  const filename = pathWithoutQuery.substring(1); // Remove leading slash
   const resizedPath = path.join(__dirname, 'public', filename);
+  
+  console.log('='.repeat(60));
+  console.log('Serving resized image (nano-banana output):');
+  console.log('  Requested filename:', filename);
+  console.log('  Full path:', resizedPath);
+  console.log('  File exists:', fs.existsSync(resizedPath));
   if (fs.existsSync(resizedPath)) {
+    const stats = fs.statSync(resizedPath);
+    console.log('  File size:', stats.size, 'bytes');
+    console.log('  File created:', stats.birthtime);
+    console.log('  File modified:', stats.mtime);
+  }
+  console.log('='.repeat(60));
+  
+  if (fs.existsSync(resizedPath)) {
+    // Set aggressive cache headers to prevent caching of generated images
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    res.setHeader('ETag', `"${Date.now()}"`);
     res.sendFile(resizedPath);
   } else {
-    res.status(404).json({ error: 'Resized image not found' });
+    console.error('ERROR: Resized image not found:', resizedPath);
+    res.status(404).json({ error: 'Resized image not found', filename: filename });
   }
 });
 
@@ -89,12 +122,79 @@ app.post('/api/visualize', upload.fields([
     const roomImage = req.files?.roomImage?.[0];
     const customTileFile = req.files?.customTileFile?.[0];
     const wallTileFile = req.files?.wallTileFile?.[0];
+    const { tileId, visualizationType, renderImagePath: rawRenderImagePath } = req.body;
     
-    if (!roomImage) {
-      return res.status(400).json({ error: 'No room image uploaded' });
+    // Decode renderImagePath if it's URL encoded
+    const renderImagePath = rawRenderImagePath ? decodeURIComponent(rawRenderImagePath) : null;
+    
+    // Either roomImage (custom upload) or renderImagePath (pre-uploaded render) must be provided
+    if (!roomImage && !renderImagePath) {
+      return res.status(400).json({ error: 'No room image uploaded or render path provided' });
     }
 
-    const { tileId, visualizationType } = req.body;
+    // Determine room image path
+    let roomImagePath;
+    if (roomImage) {
+      // Custom uploaded image - use multer path
+      roomImagePath = path.isAbsolute(roomImage.path) 
+        ? roomImage.path 
+        : path.resolve(process.cwd(), roomImage.path);
+    } else if (renderImagePath) {
+      // Render image from public/room_renders - resolve relative to public directory
+      // renderImagePath is like "/room_renders/kitchen/kitchen 1.jpg" (starts with /)
+      // Remove leading slash and join with public directory
+      const renderPath = renderImagePath.startsWith('/') 
+        ? renderImagePath.substring(1) 
+        : renderImagePath;
+      
+      // Join with public directory - handle both __dirname and process.cwd() cases
+      const publicDir = path.join(__dirname, 'public');
+      roomImagePath = path.join(publicDir, renderPath);
+      roomImagePath = path.normalize(roomImagePath);
+      
+      console.log('Render image lookup:');
+      console.log('  Original path:', renderImagePath);
+      console.log('  Render path (no leading slash):', renderPath);
+      console.log('  Public directory:', publicDir);
+      console.log('  Resolved path:', roomImagePath);
+      console.log('  Public dir exists:', fs.existsSync(publicDir));
+      console.log('  Resolved path exists:', fs.existsSync(roomImagePath));
+      
+      // Try alternative path if first doesn't work (relative to process.cwd())
+      if (!fs.existsSync(roomImagePath)) {
+        const altPath = path.join(process.cwd(), 'public', renderPath);
+        console.log('  Trying alternative path:', altPath);
+        console.log('  Alternative path exists:', fs.existsSync(altPath));
+        if (fs.existsSync(altPath)) {
+          roomImagePath = path.normalize(altPath);
+        }
+      }
+      
+      // Validate render image exists
+      if (!fs.existsSync(roomImagePath)) {
+        // List files in the directory to help debug
+        const dirPath = path.dirname(roomImagePath);
+        let dirContents = [];
+        if (fs.existsSync(dirPath)) {
+          try {
+            dirContents = fs.readdirSync(dirPath);
+          } catch (e) {
+            dirContents = ['(cannot read directory)'];
+          }
+        }
+        
+        return res.status(400).json({ 
+          error: 'Render image not found',
+          renderPath: renderImagePath,
+          resolvedPath: roomImagePath,
+          publicDir: publicDir,
+          altPublicDir: path.join(process.cwd(), 'public'),
+          directoryContents: dirContents,
+          __dirname: __dirname,
+          processCwd: process.cwd()
+        });
+      }
+    }
 
     // Validate wall tile if required
     if ((visualizationType === 'walls' || visualizationType === 'both') && !wallTileFile) {
@@ -124,7 +224,13 @@ app.post('/api/visualize', upload.fields([
       console.log('Processing walls-only visualization (no floor tile needed)...');
     }
 
-    console.log('Room image:', roomImage.path);
+    console.log('Room image path:', roomImagePath);
+    console.log('Room image source:', roomImage ? 'custom upload' : 'render');
+    if (roomImage) {
+      console.log('Room image originalname:', roomImage.originalname);
+      console.log('Room image mimetype:', roomImage.mimetype);
+      console.log('Room image size:', roomImage.size, 'bytes');
+    }
     console.log('Tile ID:', tileId);
     console.log('Tile image URL:', tileImageUrl);
     console.log('Visualization type:', visualizationType || 'floor');
@@ -133,26 +239,72 @@ app.post('/api/visualize', upload.fields([
     // Determine wall tile path if provided
     let wallTilePath = null;
     if (wallTileFile) {
-      wallTilePath = wallTileFile.path;
+      // Multer saves files relative to process.cwd()
+      wallTilePath = path.isAbsolute(wallTileFile.path) 
+        ? wallTileFile.path 
+        : path.resolve(process.cwd(), wallTileFile.path);
+      // Validate that the file exists
+      if (!fs.existsSync(wallTilePath)) {
+        return res.status(400).json({ 
+          error: 'Wall tile file not found',
+          path: wallTilePath 
+        });
+      }
+    }
+
+    // Validate that the file exists
+    console.log('Room image absolute path:', roomImagePath);
+    console.log('File exists:', fs.existsSync(roomImagePath));
+    
+    if (!fs.existsSync(roomImagePath)) {
+      return res.status(400).json({ 
+        error: 'Room image file not found',
+        path: roomImagePath,
+        currentWorkingDir: process.cwd()
+      });
+    }
+
+    // Validate file is readable and has content
+    try {
+      const stats = fs.statSync(roomImagePath);
+      console.log('File size:', stats.size, 'bytes');
+      if (stats.size === 0) {
+        return res.status(400).json({ 
+          error: 'Room image file is empty',
+          path: roomImagePath
+        });
+      }
+    } catch (statError) {
+      return res.status(400).json({ 
+        error: 'Cannot read room image file',
+        path: roomImagePath,
+        details: statError.message
+      });
     }
 
     // Call Python script for visualization
     const result = await runVisualization(
-      roomImage.path, 
+      roomImagePath, 
       tileImageUrl, 
       tileId, 
       visualizationType || 'floor',
       wallTilePath
     );
     
-    // Clean up uploaded files
-    fs.unlinkSync(roomImage.path);
+    // Clean up uploaded files (only custom uploads, not renders)
+    if (roomImage) {
+      fs.unlinkSync(roomImage.path);
+    }
     if (customTileFile) {
       fs.unlinkSync(customTileFile.path);
     }
     if (wallTileFile) {
       fs.unlinkSync(wallTileFile.path);
     }
+    
+    console.log('✓ Returning visualization result to frontend:');
+    console.log('  Image URL:', result.imageUrl);
+    console.log('  This is the nano-banana generated image');
     
     res.json({
       success: true,
@@ -169,19 +321,36 @@ app.post('/api/visualize', upload.fields([
     const wallTileFile = req.files?.wallTileFile?.[0];
     
     if (roomImage && fs.existsSync(roomImage.path)) {
-      fs.unlinkSync(roomImage.path);
+      try {
+        fs.unlinkSync(roomImage.path);
+      } catch (unlinkError) {
+        console.error('Error cleaning up room image:', unlinkError);
+      }
     }
     if (customTileFile && fs.existsSync(customTileFile.path)) {
-      fs.unlinkSync(customTileFile.path);
+      try {
+        fs.unlinkSync(customTileFile.path);
+      } catch (unlinkError) {
+        console.error('Error cleaning up custom tile:', unlinkError);
+      }
     }
     if (wallTileFile && fs.existsSync(wallTileFile.path)) {
-      fs.unlinkSync(wallTileFile.path);
+      try {
+        fs.unlinkSync(wallTileFile.path);
+      } catch (unlinkError) {
+        console.error('Error cleaning up wall tile:', unlinkError);
+      }
     }
     
-    res.status(500).json({ 
-      error: 'Failed to process visualization',
-      details: error.message 
-    });
+    // Ensure we always return JSON, not HTML
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to process visualization',
+        message: error.message || 'An unknown error occurred',
+        details: error.stack || String(error)
+      });
+    }
   }
 });
 
@@ -199,15 +368,24 @@ async function runVisualization(roomImagePath, tileImageUrl, tileId, visualizati
     
     // Copy local tile image to temp directory (only if floor tile is needed)
     if (tileImageUrl) {
-      if (!fs.existsSync(tileImageUrl)) {
-        reject(new Error(`Tile image not found: ${tileImageUrl}`));
+      // Tile images are in public/tiles, resolve relative to __dirname
+      const absoluteTilePath = path.isAbsolute(tileImageUrl) 
+        ? tileImageUrl 
+        : path.resolve(__dirname, tileImageUrl);
+      if (!fs.existsSync(absoluteTilePath)) {
+        reject(new Error(`Tile image not found: ${absoluteTilePath}`));
         return;
       }
-      fs.copyFileSync(tileImageUrl, tileImagePath);
+      fs.copyFileSync(absoluteTilePath, tileImagePath);
     }
 
     // Copy wall tile image if provided
-    if (wallTilePath && fs.existsSync(wallTilePath)) {
+    if (wallTilePath) {
+      // wallTilePath is already absolute from above
+      if (!fs.existsSync(wallTilePath)) {
+        reject(new Error(`Wall tile image not found: ${wallTilePath}`));
+        return;
+      }
       fs.copyFileSync(wallTilePath, wallTileImagePath);
     }
     
@@ -234,9 +412,11 @@ if "REPLICATE_API_TOKEN" not in os.environ or not os.environ.get("REPLICATE_API_
     sys.exit("Error: REPLICATE_API_TOKEN environment variable is not set.")
 
 # Image paths - use absolute paths
-room_path = r"${roomImagePath.replace(/\\/g, '\\\\')}"
-${tileImagePath ? `tile_path = r"${tileImagePath.replace(/\\/g, '\\\\')}"` : 'tile_path = None'}
-${wallTileImagePath ? `wall_tile_path = r"${wallTileImagePath.replace(/\\/g, '\\\\')}"` : 'wall_tile_path = None'}
+# Normalize paths using os.path.normpath (handles both forward and backslashes)
+import os
+room_path = os.path.normpath(r"${roomImagePath.replace(/\\/g, '/')}")
+${tileImagePath ? `tile_path = os.path.normpath(r"${tileImagePath.replace(/\\/g, '/')}")` : 'tile_path = None'}
+${wallTileImagePath ? `wall_tile_path = os.path.normpath(r"${wallTileImagePath.replace(/\\/g, '/')}")` : 'wall_tile_path = None'}
 visualization_type = "${visualizationType}"
 
 try:
@@ -299,7 +479,28 @@ try:
 
     # Load and correct orientation of room image BEFORE processing
     print("Loading and correcting room image orientation...")
-    room_img = Image.open(room_path)
+    print(f"Attempting to open room image at: {room_path}")
+    print(f"File exists: {os.path.exists(room_path)}")
+    
+    if not os.path.exists(room_path):
+        raise FileNotFoundError(f"Room image file not found: {room_path}")
+    
+    # Check file size
+    file_size = os.path.getsize(room_path)
+    print(f"File size: {file_size} bytes")
+    if file_size == 0:
+        raise ValueError(f"Room image file is empty: {room_path}")
+    
+    # Try to open and verify it's a valid image
+    try:
+        room_img = Image.open(room_path)
+        # Verify the image by loading it (this checks if it's a valid image file)
+        room_img.verify()
+        # Reopen after verify (verify closes the file)
+        room_img = Image.open(room_path)
+        print(f"Successfully opened image. Format: {room_img.format}, Size: {room_img.size}, Mode: {room_img.mode}")
+    except Exception as img_error:
+        raise ValueError(f"Cannot identify image file '{room_path}': {str(img_error)}. File size: {file_size} bytes")
     room_img = apply_exif_orientation(room_img)
     
     # Save the corrected room image to a temporary file
@@ -465,7 +666,11 @@ try:
             room_file.close()
             tile_file.close()
 
-    print("Raw Replicate Output:", output)
+    print("=" * 60)
+    print("RAW REPLICATE (NANO-BANANA) OUTPUT:")
+    print(f"  Output type: {type(output)}")
+    print(f"  Output value: {output}")
+    print("=" * 60)
 
     # Handle output - Google Nano-Banana returns different output types
     output_url = None
@@ -509,6 +714,8 @@ try:
                     import time
                     time.sleep(2)
             generated_img = Image.open(io.BytesIO(response.content))
+            print(f"Downloaded image from Replicate (nano-banana output): {output_url}")
+            print(f"Downloaded image size: {generated_img.size}, format: {generated_img.format}")
             
             # Get original room image dimensions (already corrected for orientation)
             # Use the corrected room image that was saved earlier
@@ -526,10 +733,29 @@ try:
             # Get the server's public directory path from environment variable
             server_root = os.environ.get('SERVER_ROOT', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             
-            # Generate unique filename to avoid caching issues
+            # Generate unique filename with timestamp and random component to avoid caching issues
             import time
-            unique_filename = f"temp_resized_{int(time.time() * 1000)}.jpg"
+            import random
+            timestamp = int(time.time() * 1000)
+            random_suffix = random.randint(1000, 9999)
+            unique_filename = f"temp_resized_{timestamp}_{random_suffix}.jpg"
             public_resized_path = os.path.join(server_root, 'public', unique_filename)
+            
+            # Clean up old temp_resized files (older than 1 hour) to prevent accumulation
+            try:
+                import glob
+                temp_files = glob.glob(os.path.join(server_root, 'public', 'temp_resized_*.jpg'))
+                current_time = time.time()
+                for temp_file in temp_files:
+                    try:
+                        file_age = current_time - os.path.getmtime(temp_file)
+                        if file_age > 3600:  # 1 hour
+                            os.remove(temp_file)
+                            print(f"Cleaned up old temp file: {os.path.basename(temp_file)}")
+                    except Exception as e:
+                        print(f"Warning: Could not clean up {temp_file}: {e}")
+            except Exception as cleanup_error:
+                print(f"Warning: Cleanup failed: {cleanup_error}")
             
             # Ensure the public directory exists
             os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
@@ -538,11 +764,25 @@ try:
             # The image is already correctly oriented, so we save it as-is
             generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True, exif=b'')
             
-            # Return the local path that can be served by the web server
+            # Verify the saved file exists and has content
+            saved_size = os.path.getsize(public_resized_path)
+            print(f"Saved resized image to: {public_resized_path}")
+            print(f"Saved file size: {saved_size} bytes")
+            
+            # Return the local path with cache-busting query parameter
             # Use the same origin as the request to avoid hardcoded localhost
-            output_url = f"/{unique_filename}"
-            print("Image resized to match original dimensions exactly")
-            print(f"Resized image available at: {output_url}")
+            # Add timestamp to URL to ensure browser always fetches fresh image
+            cache_buster = int(time.time() * 1000)
+            output_url = f"/{unique_filename}?t={cache_buster}"
+            print("=" * 60)
+            print("FINAL OUTPUT - NANO-BANANA GENERATED IMAGE:")
+            print(f"  Source: Replicate nano-banana model")
+            print(f"  Original Replicate URL: {output_url} (before download)")
+            print(f"  Resized to match original: {original_size}")
+            print(f"  Saved to: {public_resized_path}")
+            print(f"  File size: {saved_size} bytes")
+            print(f"  RESULT_URL: {output_url}")
+            print("=" * 60)
                 
         except Exception as resize_error:
             print(f"Warning: Could not resize image: {resize_error}")
@@ -552,10 +792,13 @@ try:
         print(f"RESULT_URL:{output_url}")
     else:
         print("ERROR: No output generated")
+        sys.exit(1)
 
 except Exception as e:
-    print(f"Error: {e}")
+    import traceback
     print(f"ERROR: {str(e)}")
+    print(f"ERROR_TRACEBACK: {traceback.format_exc()}")
+    sys.exit(1)
 
 # Cleanup completed
 `;
@@ -604,17 +847,43 @@ except Exception as e:
             fs.rmSync(tempDir, { recursive: true, force: true });
           }
 
-          if (code !== 0) {
-            reject(new Error(`Python script failed with code ${code}: ${errorOutput}`));
+          // Check for ERROR: in output first (even if code is 0)
+          const errorMatch = output.match(/ERROR:(.+)/);
+          if (errorMatch) {
+            console.error('Python script reported error. Full output:', output);
+            console.error('Python script error output:', errorOutput);
+            reject(new Error(`Python script error: ${errorMatch[1].trim()}`));
             return;
           }
 
-          // Extract result URL from output
+          if (code !== 0) {
+            // Log full output for debugging
+            console.error('Python script failed. Full output:', output);
+            console.error('Python script error output:', errorOutput);
+            reject(new Error(`Python script failed with code ${code}: ${errorOutput || output || 'Unknown error'}`));
+            return;
+          }
+
+          // Extract result URL from output - this is the nano-banana generated image
           const resultMatch = output.match(/RESULT_URL:(.+)/);
           if (resultMatch) {
-            resolve({ imageUrl: resultMatch[1].trim() });
+            const imageUrl = resultMatch[1].trim();
+            console.log('✓ Extracted RESULT_URL from Python output:', imageUrl);
+            console.log('✓ This is the nano-banana generated image from server.js');
+            resolve({ imageUrl: imageUrl });
           } else {
-            reject(new Error('No result URL found in Python output'));
+            // Log full output for debugging
+            console.error('No RESULT_URL found in Python output.');
+            console.error('Full Python stdout:', output);
+            console.error('Full Python stderr:', errorOutput);
+            
+            // Try to extract error message from output
+            const errorTraceMatch = output.match(/ERROR_TRACEBACK:([\s\S]+?)(?=\n\n|$)/);
+            const errorMsg = errorTraceMatch 
+              ? `Python error traceback: ${errorTraceMatch[1].trim()}`
+              : `No result URL found. Last 1000 chars of output: ${output.substring(Math.max(0, output.length - 1000))}`;
+            
+            reject(new Error(errorMsg));
           }
         });
 
@@ -638,13 +907,26 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🎨 Visualization API: http://localhost:${PORT}/api/visualize`);
 });
 
-// Fallback to index.html for SPA routes and root
+// Global error handler middleware (must be before catch-all route)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: err.message || 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// Fallback to index.html for SPA routes and root (GET requests only)
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'dist', 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(404).send('Not Found');
+    res.status(404).json({ error: 'Not Found' });
   }
 });
 

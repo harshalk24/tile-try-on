@@ -6,23 +6,23 @@ const Navigation = () => {
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center">
           <img 
-            src="/logo/roommorph.ai logo.jpg" 
-            alt="RoomMorph.AI Logo" 
-            className="h-14 w-auto"
+            src="/logo/Nazaraa-logo.png" 
+            alt="Nazaraa Logo" 
+            className="h-20 w-auto"
           />
         </div>
         
         <div className="hidden md:flex items-center gap-8 ml-auto mr-8">
-          <a href="#" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
+          <a href="/products" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
             Products
           </a>
-          <a href="#" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
+          <a href="/about" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
             About Us
           </a>
-          <a href="#" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
+          <a href="/blog" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
             Blogs
           </a>
-          <a href="#" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
+          <a href="/contact" className="text-sm text-foreground hover:text-foreground/80 transition-colors">
             Contact Us
           </a>
         </div>

@@ -1,6 +1,7 @@
 import { X, Share2, Download, RotateCcw, ZoomIn, RotateCw, Grid3x3, GitCompare, Filter, Heart, Upload, Layout, Sparkles, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import VisualizationResult from "./VisualizationResult";
 import { VisualizationService } from "@/services/visualizationService";
 import { toast } from "sonner";
@@ -12,34 +13,74 @@ interface VisualizerPreviewProps {
   onSwitchToOldUI?: () => void;
 }
 
-// Room renders from collection
-const roomRenders = [
+// Room renders from collection - organized by room type
+type RoomType = "living-room" | "bedroom" | "bathroom" | "kitchen";
+
+interface RoomRender {
+  id: string;
+  name: string;
+  image: string;
+  type: RoomType;
+}
+
+const roomRenders: RoomRender[] = [
   {
-    id: "room-render-1",
-    name: "Modern Living Space",
-    image: "/room_renders/room-render.png",
-  },
-  {
-    id: "room-render-2",
-    name: "Elegant Interior",
-    image: "/room_renders/room-render-2.jpg",
-  },
-  {
-    id: "room-render-3",
-    name: "Cozy Bedroom",
-    image: "/room_renders/room-render-3.jpg",
-  },
-  {
-    id: "room-render-4",
+    id: "kitchen-1",
     name: "Modern Kitchen",
-    image: "/room_renders/room-render-4.webp",
+    image: "/room_renders/kitchen/kitchen 1.jpg",
+    type: "kitchen",
+  },
+  {
+    id: "bathroom-1",
+    name: "Modern Bathroom",
+    image: "/room_renders/bathroom/bathroom 1.jpg",
+    type: "bathroom",
+  },
+  {
+    id: "bedroom-1",
+    name: "Cozy Bedroom",
+    image: "/room_renders/bedroom/bedroom 1.jpg",
+    type: "bedroom",
+  },
+  {
+    id: "living-room-1",
+    name: "Living Room Render",
+    image: "/room_renders/living-room/room-render-3.jpg",
+    type: "living-room",
   }
 ];
 
+// Room type cards for selection
+const roomTypes = [
+  {
+    type: "kitchen" as RoomType,
+    label: "Kitchen",
+    thumbnail: "/room_renders/kitchen/thumbnail.jpg", // You'll add this thumbnail
+  },
+  {
+    type: "bathroom" as RoomType,
+    label: "Bathroom",
+    thumbnail: "/room_renders/bathroom/thumbnail.jpg", // You'll add this thumbnail
+  },
+  {
+    type: "living-room" as RoomType,
+    label: "Living Room",
+    thumbnail: "/room_renders/living-room/thumbnail.jpg", // You'll add this thumbnail
+  },
+  {
+    type: "bedroom" as RoomType,
+    label: "Bedroom",
+    thumbnail: "/room_renders/bedroom/thumbnail.jpg", // You'll add this thumbnail
+  },
+];
+
 const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchToOldUI }: VisualizerPreviewProps) => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<"Floors" | "Walls">("Floors");
   const [visualizationType, setVisualizationType] = useState<"floor" | "walls" | "both">("floor");
+  const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("living-room");
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
+  const [showThumbnail, setShowThumbnail] = useState(true); // Initially show thumbnail
   const [customRoomImage, setCustomRoomImage] = useState<string | null>(null);
   const [customRoomFile, setCustomRoomFile] = useState<File | null>(null);
   const [selectedFloorTile, setSelectedFloorTile] = useState<string | null>(null);
@@ -89,10 +130,24 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
     }))
   ];
 
+  // Filter renders based on selected room type
+  const filteredRenders = roomRenders.filter(render => render.type === selectedRoomType);
+
+  // Reset room index when room type changes and show the thumbnail
+  useEffect(() => {
+    setCurrentRoomIndex(0);
+    setCustomRoomImage(null);
+    setCustomRoomFile(null);
+    setShowThumbnail(true); // Show thumbnail when room type changes
+  }, [selectedRoomType]);
+
   const handleChangeRoom = () => {
     setCustomRoomImage(null); // Clear custom image when changing room
     setCustomRoomFile(null); // Clear custom file when changing room
-    setCurrentRoomIndex((prev) => (prev + 1) % roomRenders.length);
+    setShowThumbnail(false); // Switch to showing renders instead of thumbnail
+    if (filteredRenders.length > 0) {
+      setCurrentRoomIndex((prev) => (prev + 1) % filteredRenders.length);
+    }
   };
 
   const handleTileSelect = (tileId: string) => {
@@ -190,32 +245,42 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
 
 
   const handleGenerateVisualization = async () => {
-    // Get room image file
+    // Get room image file or render path
     let roomImageFile: File | null = null;
+    let renderImagePath: string | null = null;
     let previewUrl: string | null = null;
 
     if (customRoomFile) {
+      // Custom uploaded image - send as File
       roomImageFile = customRoomFile;
       previewUrl = customRoomImage;
     } else {
-      // For render photos, fetch the image and convert to File
-      try {
-        const renderImageUrl = roomRenders[currentRoomIndex].image;
-        const response = await fetch(renderImageUrl);
-        const blob = await response.blob();
-        roomImageFile = new File([blob], `room-render-${Date.now()}.jpg`, { type: blob.type });
-        previewUrl = renderImageUrl;
-      } catch (error) {
-        console.error("Error loading render image:", error);
-        toast.error("Failed to load room render image");
-        return;
+      // For render photos, pass the path directly (renders are already on server)
+      if (showThumbnail) {
+        // When thumbnail is shown, use the thumbnail image for visualization
+        const thumbnailPath = roomTypes.find(rt => rt.type === selectedRoomType)?.thumbnail;
+        if (!thumbnailPath) {
+          toast.error("Thumbnail not found for selected room type");
+          return;
+        }
+        renderImagePath = thumbnailPath;
+        previewUrl = thumbnailPath;
+      } else {
+        // When a specific render is selected, use that render
+        const renderToUse = filteredRenders[currentRoomIndex] || filteredRenders[0];
+        if (!renderToUse) {
+          toast.error("No room renders available");
+          return;
+        }
+        renderImagePath = renderToUse.image;
+        previewUrl = renderImagePath;
       }
     }
 
     // Store the preview URL for the result view
     setOriginalImagePreview(previewUrl);
 
-    if (!roomImageFile) {
+    if (!roomImageFile && !renderImagePath) {
       toast.error("Please upload a room image or select a render");
       return;
     }
@@ -274,21 +339,41 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
         if (customWallTile && selectedWallTile === customWallTile.id) {
           wallTileFile = customWallTile.file;
         } else {
-          // For predefined wall tiles, we need to fetch the file
-          // For now, we'll need to handle this differently
-          // Since predefined tiles are referenced by ID, we'll need to pass the ID
-          // But the backend expects a file, so we'll need to fetch it
+          // For predefined wall tiles, fetch the file
           const wallTileImageUrl = materialSwatches.find(s => s.id === selectedWallTile)?.image;
           if (wallTileImageUrl) {
-            const response = await fetch(wallTileImageUrl);
-            const blob = await response.blob();
-            wallTileFile = new File([blob], `wall-tile-${selectedWallTile}.jpg`, { type: blob.type });
+            try {
+              const response = await fetch(wallTileImageUrl);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch wall tile image: ${response.statusText}`);
+              }
+              const blob = await response.blob();
+              // Ensure proper MIME type - default to image/jpeg if not set
+              const mimeType = blob.type || 'image/jpeg';
+              // Determine file extension from URL or MIME type
+              let extension = 'jpg';
+              if (mimeType.includes('png')) extension = 'png';
+              else if (mimeType.includes('webp')) extension = 'webp';
+              wallTileFile = new File([blob], `wall-tile-${selectedWallTile}.${extension}`, { type: mimeType });
+            } catch (error) {
+              console.error("Error loading wall tile image:", error);
+              toast.error("Failed to load wall tile image");
+              setIsVisualizing(false);
+              setShowResult(false);
+              return;
+            }
+          } else {
+            toast.error("Wall tile image not found");
+            setIsVisualizing(false);
+            setShowResult(false);
+            return;
           }
         }
       }
 
       const result = await VisualizationService.visualizeRoom({
-        roomImage: roomImageFile,
+        roomImage: roomImageFile || undefined,
+        renderImagePath: renderImagePath || undefined,
         tileId: tileId,
         customTileFile: customTileFile,
         visualizationType: visualizationType,
@@ -296,7 +381,11 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
       });
 
       if (result.success) {
-        setVisualizedImage(result.imageUrl);
+        // Ensure we use the exact URL from the API response (with cache-busting)
+        const imageUrl = result.imageUrl;
+        console.log('✓ Setting visualized image URL:', imageUrl);
+        console.log('✓ This is the real-time nano-banana generated image');
+        setVisualizedImage(imageUrl);
         toast.success("Visualization complete!");
       } else {
         throw new Error(result.message || 'Visualization failed');
@@ -323,9 +412,10 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
           <div className="w-full px-6 h-full flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src="/logo/roommorph.ai logo.jpg" 
+                src="/logo/Nazaraa-logo.png" 
                 alt="Company Logo" 
-                className="h-10 w-auto"
+                className="h-20 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => navigate('/')}
               />
             </div>
             <Button 
@@ -359,9 +449,10 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
           {/* Left: Logo and UI Toggle */}
           <div className="flex items-center gap-4">
             <img 
-              src="/logo/roommorph.ai logo.jpg" 
+              src="/logo/Nazaraa-logo.png" 
               alt="Company Logo" 
-              className="h-10 w-auto"
+              className="h-16 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate('/')}
             />
             {onSwitchToOldUI && (
               <Button
@@ -570,8 +661,8 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
                       />
                     )}
                     {isSelected && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#0F8B82]/20 rounded-lg">
-                        <div className="w-6 h-6 bg-[#0F8B82] rounded-full flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#FF6B35]/20 rounded-lg">
+                        <div className="w-6 h-6 bg-[#FF6B35] rounded-full flex items-center justify-center">
                           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -596,8 +687,8 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
         </aside>
 
         {/* Main Canvas Area */}
-        <main className="flex-1 relative overflow-hidden min-h-0 bg-[#f6f7f8]">
-          <div className="relative w-full h-full flex items-center justify-center">
+        <main className="flex-1 relative overflow-y-auto min-h-0 bg-[#f6f7f8]">
+          <div className="relative w-full min-h-full flex items-center justify-center">
             {/* Hidden file input for room upload */}
             <input
               ref={fileInputRef}
@@ -619,7 +710,7 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
                   }`}
                 >
                   {visualizationType === "floor" && (
-                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center mr-0.5">
                       <svg className="w-2.5 h-2.5 text-[#2B2B2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
@@ -666,15 +757,26 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
             
             {/* Room Image */}
             <img
-              src={customRoomImage || roomRenders[currentRoomIndex].image}
-              alt={customRoomImage ? "Custom room photo" : roomRenders[currentRoomIndex].name}
+              src={
+                customRoomImage || 
+                (showThumbnail 
+                  ? (roomTypes.find(rt => rt.type === selectedRoomType)?.thumbnail || "") 
+                  : (filteredRenders[currentRoomIndex] || filteredRenders[0])?.image || "")
+              }
+              alt={
+                customRoomImage 
+                  ? "Custom room photo" 
+                  : showThumbnail 
+                    ? `${roomTypes.find(rt => rt.type === selectedRoomType)?.label || ""} thumbnail`
+                    : (filteredRenders[currentRoomIndex] || filteredRenders[0])?.name || "Room render"
+              }
               className="w-[1200px] h-[800px] max-w-[90vw] max-h-[85vh] object-contain"
             />
 
 
 
-            {/* Large Circular Cursor CTA - Only show when no custom image is uploaded */}
-            {!customRoomImage && (
+            {/* Large Circular Cursor CTA - Only show when no custom image is uploaded and not showing thumbnail */}
+            {!customRoomImage && !showThumbnail && (
               <button
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[31vmin] h-[31vmin] max-w-[294px] max-h-[294px] bg-[rgba(255,107,53,0.78)] rounded-full flex items-center justify-center shadow-[0_12px_30px_rgba(0,0,0,0.28)] cursor-pointer transition-all duration-200 hover:scale-[1.06] hover:shadow-[0_18px_40px_rgba(0,0,0,0.36)] focus:outline-none focus:ring-4 focus:ring-white/40 z-30"
                 onClick={handleCursorClick}
@@ -760,55 +862,178 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
                 );
               })()}
             </div>
-            
+
             {/* Bottom Toolbar - Show other buttons when Generate is not ready */}
             {!((visualizationType === "floor" && selectedFloorTile) || 
               (visualizationType === "walls" && selectedWallTile) ||
               (visualizationType === "both" && selectedFloorTile && selectedWallTile)) && (
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-4 flex gap-2.5 z-40">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
-                >
-                  Remove
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
-                >
-                  <ZoomIn className="h-4 w-4 mr-1.5" />
-                  Zoom
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
-                >
-                  <RotateCw className="h-4 w-4 mr-1.5" />
-                  Rotate
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
-                >
-                  <Grid3x3 className="h-4 w-4 mr-1.5" />
-                  Pattern
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
-                >
-                  <GitCompare className="h-4 w-4 mr-1.5" />
-                  Compare
-                </Button>
-              </div>
+              <>
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-4 flex gap-2.5 z-40">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
+                  >
+                    Remove
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
+                  >
+                    <ZoomIn className="h-4 w-4 mr-1.5" />
+                    Zoom
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
+                  >
+                    <RotateCw className="h-4 w-4 mr-1.5" />
+                    Rotate
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
+                  >
+                    <Grid3x3 className="h-4 w-4 mr-1.5" />
+                    Pattern
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-md text-sm font-medium text-[#2B2B2B] hover:bg-white"
+                  >
+                    <GitCompare className="h-4 w-4 mr-1.5" />
+                    Compare
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </main>
+
+        {/* Right Sidebar - Room Type Picker */}
+        <aside className="w-[290px] bg-white border-l border-[#E6E6E6] overflow-y-auto flex-shrink-0">
+          <div className="p-4 space-y-4">
+            {/* Room Type Header */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[#2B2B2B]">Room Types</span>
+            </div>
+
+            {/* Room Type Selection Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {roomTypes.map((roomType) => {
+                const isSelected = selectedRoomType === roomType.type;
+                return (
+                  <button
+                    key={roomType.type}
+                    onClick={() => {
+                      setSelectedRoomType(roomType.type);
+                      setCurrentRoomIndex(0);
+                      setCustomRoomImage(null);
+                      setCustomRoomFile(null);
+                      setShowThumbnail(true); // Show thumbnail when room type is selected
+                    }}
+                    className={`relative group transition-all ${
+                      isSelected ? 'ring-2 ring-[#FF6B35] ring-offset-2' : ''
+                    }`}
+                  >
+                    <div className="w-full aspect-square rounded-lg overflow-hidden border-2 bg-[#F6F7F8] transition-transform hover:scale-105">
+                      {roomType.thumbnail ? (
+                        <img
+                          src={roomType.thumbnail}
+                          alt={roomType.label}
+                          className={`w-full h-full object-cover ${
+                            isSelected ? 'border-[#FF6B35] border-2' : 'border-[#E6E6E6]'
+                          }`}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#6B6B6B] text-sm">
+                          {roomType.label}
+                        </div>
+                      )}
+                    </div>
+                    <span className={`block text-xs font-medium mt-2 text-center ${
+                      isSelected ? "text-[#FF6B35]" : "text-[#222]"
+                    }`}>
+                      {roomType.label}
+                    </span>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-[#FF6B35] rounded-full flex items-center justify-center shadow-md z-10">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Room Renders List */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[#2B2B2B]">Room Renders</span>
+              </div>
+              <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
+                {roomRenders
+                  .filter(render => render.type === selectedRoomType)
+                  .map((render, index) => {
+                    const renderIndex = roomRenders.findIndex(r => r.id === render.id);
+                    const isActive = !customRoomImage && !showThumbnail && renderIndex === currentRoomIndex;
+                    return (
+                      <button
+                        key={render.id}
+                        onClick={() => {
+                          // Toggle selection: if already selected, unselect (go back to thumbnail)
+                          if (isActive) {
+                            setShowThumbnail(true);
+                            setCurrentRoomIndex(0);
+                          } else {
+                            setCurrentRoomIndex(renderIndex);
+                            setCustomRoomImage(null);
+                            setCustomRoomFile(null);
+                            setShowThumbnail(false); // Switch to showing renders
+                          }
+                        }}
+                        className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all text-left ${
+                          isActive
+                            ? 'bg-[#FF6B35]/10 border-2 border-[#FF6B35]'
+                            : 'bg-[#f6f7f8] hover:bg-[#E6E6E6] border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={render.image}
+                            alt={render.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#2B2B2B] truncate">{render.name}</p>
+                        </div>
+                        {isActive && (
+                          <div className="w-5 h-5 bg-[#FF6B35] rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
+import ValueProposition from "@/components/ValueProposition";
+import ProductsSection from "@/components/ProductsSection";
+import TargetAudience from "@/components/TargetAudience";
+import HowItWorks from "@/components/HowItWorks";
+import MESASection from "@/components/MESASection";
+import FAQ from "@/components/FAQ";
+import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import UploadArea from "@/components/UploadArea";
 import TileGallery, { TileSKU } from "@/components/TileGallery";
@@ -217,6 +224,13 @@ const Index = () => {
       <div className="min-h-screen bg-background">
         <Navigation />
         <HeroSection onGetStarted={() => setShowVisualizerPreview(true)} />
+        <ValueProposition />
+        <ProductsSection />
+        <TargetAudience />
+        <HowItWorks />
+        <MESASection />
+        <FAQ />
+        <Footer />
       </div>
     );
   }
@@ -242,9 +256,9 @@ const Index = () => {
           <div className="w-full px-6 h-full flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src="/logo/roommorph.ai logo.jpg" 
+                src="/logo/Nazaraa-logo.png" 
                 alt="Company Logo" 
-                className="h-10 w-auto"
+                className="h-20 w-auto"
               />
               <Button
                 variant="outline"
@@ -407,7 +421,7 @@ const Index = () => {
 
                   {/* Powered by badge */}
                   <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-medium text-[#6B6B6B] z-40">
-                    Powered by roommorph.ai
+                    Powered by nazaraa
                   </div>
                 </div>
               )}
