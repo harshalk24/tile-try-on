@@ -18,81 +18,6 @@ const PORT = process.env.PORT || 3003;
 app.use(cors());
 app.use(express.json());
 
-// IMPORTANT: Register dynamic image route BEFORE static middleware
-// Serve the resized images (dynamic filenames) - these are nano-banana generated images
-// Use regex pattern instead of wildcard for better matching (like working version but dynamic)
-app.get(/^\/temp_resized_\d+_\d+\.jpg$/, (req, res) => {
-  // Extract filename from path (remove query parameters)
-  const pathWithoutQuery = req.path.split('?')[0];
-  const filename = pathWithoutQuery.substring(1); // Remove leading slash
-  
-  // Use simple path resolution like the working version, but try alternative for EC2
-  const resizedPath = path.join(__dirname, 'public', filename);
-  const altResizedPath = path.join(process.cwd(), 'public', filename);
-  
-  const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  console.log('\n' + '='.repeat(80));
-  console.log(`[${requestId}] IMAGE REQUEST RECEIVED`);
-  console.log('='.repeat(80));
-  console.log(`[${requestId}] Timestamp:`, new Date().toISOString());
-  console.log(`[${requestId}] Requested path:`, req.path);
-  console.log(`[${requestId}] Requested filename:`, filename);
-  console.log(`[${requestId}] Full URL:`, req.url);
-  console.log(`[${requestId}] __dirname:`, __dirname);
-  console.log(`[${requestId}] process.cwd():`, process.cwd());
-  console.log(`[${requestId}] Primary path:`, resizedPath);
-  console.log(`[${requestId}] Primary exists:`, fs.existsSync(resizedPath));
-  console.log(`[${requestId}] Alt path:`, altResizedPath);
-  console.log(`[${requestId}] Alt exists:`, fs.existsSync(altResizedPath));
-  
-  // Try primary path first (like working version), then fallback
-  let finalPath = null;
-  if (fs.existsSync(resizedPath)) {
-    finalPath = resizedPath;
-    console.log(`[${requestId}] ✓ Using primary path`);
-  } else if (fs.existsSync(altResizedPath)) {
-    finalPath = altResizedPath;
-    console.log(`[${requestId}] ✓ Using alternative path`);
-  }
-  if (finalPath) {
-    try {
-      const stats = fs.statSync(finalPath);
-      console.log(`[${requestId}] ✓ File verified - Size: ${stats.size} bytes`);
-    } catch (e) {
-      console.error(`[${requestId}] ✗ Error reading file stats:`, e.message);
-    }
-  }
-  console.log('='.repeat(80));
-  
-  if (finalPath && fs.existsSync(finalPath)) {
-    // Set cache headers
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Content-Type', 'image/jpeg');
-    console.log(`[${requestId}] ✓ Sending image file`);
-    res.sendFile(path.resolve(finalPath), (err) => {
-      if (err) {
-        console.error(`[${requestId}] ✗ Error sending file:`, err.message);
-      } else {
-        console.log(`[${requestId}] ✓ File sent successfully`);
-      }
-    });
-  } else {
-    console.error(`[${requestId}] ✗ ERROR: Resized image not found`);
-    console.error(`[${requestId}]   Primary: ${resizedPath} - ${fs.existsSync(resizedPath) ? 'EXISTS' : 'NOT FOUND'}`);
-    console.error(`[${requestId}]   Alt: ${altResizedPath} - ${fs.existsSync(altResizedPath) ? 'EXISTS' : 'NOT FOUND'}`);
-    res.status(404).json({ 
-      error: 'Resized image not found', 
-      filename: filename,
-      primaryPath: resizedPath,
-      altPath: altResizedPath,
-      __dirname: __dirname,
-      cwd: process.cwd(),
-      requestId: requestId
-    });
-  }
-});
 
 // Serve built frontend (Vite) if present
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -153,6 +78,25 @@ app.get('/health', (req, res) => {
 
 // Serve static files from public directory
 app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Serve the resized images (dynamic filenames) - matching working version
+// Route AFTER static middleware like working version
+app.get('/temp_resized_*', (req, res) => {
+  const filename = req.path.substring(1); // Remove leading slash - simple like working version
+  const resizedPath = path.join(__dirname, 'public', filename);
+  
+  // Debug logging
+  console.log('Serving resized image:', filename);
+  console.log('  Path:', resizedPath);
+  console.log('  Exists:', fs.existsSync(resizedPath));
+  
+  if (fs.existsSync(resizedPath)) {
+    res.sendFile(resizedPath); // Simple sendFile like working version
+  } else {
+    console.error('Resized image not found:', resizedPath);
+    res.status(404).json({ error: 'Resized image not found' });
+  }
+});
 
 // Main visualization endpoint
 app.post('/api/visualize', upload.fields([
@@ -809,57 +753,22 @@ try:
                     print(f"  ERROR: Could not create public directory: {e}")
                     raise
             
-            # Generate unique filename with timestamp and random component to avoid caching issues
+            # Generate unique filename to avoid caching issues - simple like working version
             import time
-            import random
-            timestamp = int(time.time() * 1000)
-            random_suffix = random.randint(1000, 9999)
-            unique_filename = f"temp_resized_{timestamp}_{random_suffix}.jpg"
+            unique_filename = f"temp_resized_{int(time.time() * 1000)}.jpg"
             public_resized_path = os.path.join(server_root, 'public', unique_filename)
             
-            # Clean up old temp_resized files (older than 1 hour) to prevent accumulation
-            try:
-                import glob
-                temp_files = glob.glob(os.path.join(server_root, 'public', 'temp_resized_*.jpg'))
-                current_time = time.time()
-                for temp_file in temp_files:
-                    try:
-                        file_age = current_time - os.path.getmtime(temp_file)
-                        if file_age > 3600:  # 1 hour
-                            os.remove(temp_file)
-                            print(f"Cleaned up old temp file: {os.path.basename(temp_file)}")
-                    except Exception as e:
-                        print(f"Warning: Could not clean up {temp_file}: {e}")
-            except Exception as cleanup_error:
-                print(f"Warning: Cleanup failed: {cleanup_error}")
-            
-            # Ensure the public directory exists
+            # Ensure the public directory exists - simple like working version
             os.makedirs(os.path.dirname(public_resized_path), exist_ok=True)
             
             # Save with proper orientation (save without EXIF to prevent double rotation)
             # The image is already correctly oriented, so we save it as-is
-            generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True, exif=b'')
+            generated_img.save(public_resized_path, 'JPEG', quality=95, optimize=True)
             
-            # Verify the saved file exists and has content
-            saved_size = os.path.getsize(public_resized_path)
-            print(f"Saved resized image to: {public_resized_path}")
-            print(f"Saved file size: {saved_size} bytes")
-            
-            # Return the local path (cache-busting handled by unique filename)
-            # The unique filename with timestamp already prevents caching
+            # Return the local path that can be served by the web server - simple like working version
             output_url = f"/{unique_filename}"
-            print("=" * 60)
-            print("FINAL OUTPUT - NANO-BANANA GENERATED IMAGE:")
-            print(f"  Source: Replicate nano-banana model")
-            print(f"  Saved file path: {public_resized_path}")
-            print(f"  File exists: {os.path.exists(public_resized_path)}")
-            print(f"  File size: {saved_size} bytes")
-            print(f"  Resized to match original: {original_size}")
-            print(f"  RESULT_URL: {output_url}")
-            print(f"  SERVER_ROOT: {server_root}")
-            print(f"  Public directory: {public_dir}")
-            print(f"  Current working directory: {os.getcwd()}")
-            print("=" * 60)
+            print("Image resized to match original dimensions exactly")
+            print(f"Resized image available at: {output_url}")
                 
         except Exception as resize_error:
             print(f"Warning: Could not resize image: {resize_error}")
