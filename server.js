@@ -731,7 +731,25 @@ try:
             
             # Save resized image to a temporary file in the public directory
             # Get the server's public directory path from environment variable
-            server_root = os.environ.get('SERVER_ROOT', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            # SERVER_ROOT should be the project root (where server.js is located)
+            server_root = os.environ.get('SERVER_ROOT')
+            if not server_root:
+                # Fallback: use current working directory (should be project root when server.js runs)
+                server_root = os.getcwd()
+            
+            # Verify public directory exists
+            public_dir = os.path.join(server_root, 'public')
+            if not os.path.exists(public_dir):
+                print(f"WARNING: public directory not found at {public_dir}")
+                print(f"  SERVER_ROOT: {server_root}")
+                print(f"  Current working directory: {os.getcwd()}")
+                # Try to create it
+                try:
+                    os.makedirs(public_dir, exist_ok=True)
+                    print(f"  Created public directory: {public_dir}")
+                except Exception as e:
+                    print(f"  ERROR: Could not create public directory: {e}")
+                    raise
             
             # Generate unique filename with timestamp and random component to avoid caching issues
             import time
@@ -769,11 +787,9 @@ try:
             print(f"Saved resized image to: {public_resized_path}")
             print(f"Saved file size: {saved_size} bytes")
             
-            # Return the local path with cache-busting query parameter
-            # Use the same origin as the request to avoid hardcoded localhost
-            # Add timestamp to URL to ensure browser always fetches fresh image
-            cache_buster = int(time.time() * 1000)
-            output_url = f"/{unique_filename}?t={cache_buster}"
+            # Return the local path (cache-busting handled by unique filename)
+            # The unique filename with timestamp already prevents caching
+            output_url = f"/{unique_filename}"
             print("=" * 60)
             print("FINAL OUTPUT - NANO-BANANA GENERATED IMAGE:")
             print(f"  Source: Replicate nano-banana model")
@@ -810,6 +826,18 @@ except Exception as e:
         // Run Python script with timeout
         // Try python3 first, fallback to python
         const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+        
+        // Enhanced logging for EC2 debugging
+        console.log('='.repeat(60));
+        console.log('Executing Python visualization script:');
+        console.log('  Python command:', pythonCommand);
+        console.log('  Script path:', scriptPath);
+        console.log('  REPLICATE_API_TOKEN set:', !!replicateToken);
+        console.log('  SERVER_ROOT:', __dirname);
+        console.log('  Platform:', process.platform);
+        console.log('  Node version:', process.version);
+        console.log('='.repeat(60));
+        
         const python = spawn(pythonCommand, [scriptPath], {
           stdio: ['pipe', 'pipe', 'pipe'],
           env: { 
@@ -827,6 +855,12 @@ except Exception as e:
 
         let output = '';
         let errorOutput = '';
+        
+        // Log Python command for debugging
+        console.log('Running Python script:');
+        console.log('  Command:', pythonCommand, scriptPath);
+        console.log('  REPLICATE_API_TOKEN set:', !!replicateToken);
+        console.log('  SERVER_ROOT:', __dirname);
 
         python.stdout.on('data', (data) => {
           output += data.toString();
@@ -872,10 +906,17 @@ except Exception as e:
             console.log('✓ This is the nano-banana generated image from server.js');
             resolve({ imageUrl: imageUrl });
           } else {
-            // Log full output for debugging
-            console.error('No RESULT_URL found in Python output.');
-            console.error('Full Python stdout:', output);
-            console.error('Full Python stderr:', errorOutput);
+            // Enhanced error logging for EC2 debugging
+            console.error('='.repeat(60));
+            console.error('ERROR: No RESULT_URL found in Python output');
+            console.error('Python exit code:', code);
+            console.error('Python stdout length:', output.length);
+            console.error('Python stderr length:', errorOutput.length);
+            console.error('Last 500 chars of stdout:', output.substring(Math.max(0, output.length - 500)));
+            console.error('Last 500 chars of stderr:', errorOutput.substring(Math.max(0, errorOutput.length - 500)));
+            console.error('Full stdout:', output);
+            console.error('Full stderr:', errorOutput);
+            console.error('='.repeat(60));
             
             // Try to extract error message from output
             const errorTraceMatch = output.match(/ERROR_TRACEBACK:([\s\S]+?)(?=\n\n|$)/);

@@ -93,10 +93,9 @@ export class VisualizationService {
       
       // Convert relative URLs to absolute URLs
       if (result.imageUrl && result.imageUrl.startsWith('/')) {
-        // Add cache-busting parameter if not already present
-        const separator = result.imageUrl.includes('?') ? '&' : '?';
-        const cacheBuster = `_t=${Date.now()}`;
-        result.imageUrl = API_BASE_URL + result.imageUrl + separator + cacheBuster;
+        // The Python script already adds cache-busting, so just prepend the base URL
+        // Don't add another cache-buster to avoid double query params
+        result.imageUrl = API_BASE_URL + result.imageUrl;
       }
       
       console.log('✓ Received visualization result from API:');
