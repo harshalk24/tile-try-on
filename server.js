@@ -20,25 +20,15 @@ app.use(express.json());
 
 // IMPORTANT: Register dynamic image route BEFORE static middleware
 // Serve the resized images (dynamic filenames) - these are nano-banana generated images
-app.get('/temp_resized_*', (req, res) => {
+// Use regex pattern instead of wildcard for better matching (like working version but dynamic)
+app.get(/^\/temp_resized_\d+_\d+\.jpg$/, (req, res) => {
   // Extract filename from path (remove query parameters)
   const pathWithoutQuery = req.path.split('?')[0];
   const filename = pathWithoutQuery.substring(1); // Remove leading slash
   
-  // Try multiple path resolutions for EC2 compatibility
-  const possiblePaths = [
-    path.join(__dirname, 'public', filename),  // Standard path
-    path.join(process.cwd(), 'public', filename),  // Current working directory
-    path.resolve('public', filename),  // Relative to process.cwd()
-  ];
-  
-  let resizedPath = null;
-  for (const possiblePath of possiblePaths) {
-    if (fs.existsSync(possiblePath)) {
-      resizedPath = possiblePath;
-      break;
-    }
-  }
+  // Use simple path resolution like the working version, but try alternative for EC2
+  const resizedPath = path.join(__dirname, 'public', filename);
+  const altResizedPath = path.join(process.cwd(), 'public', filename);
   
   const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
   console.log('\n' + '='.repeat(80));
@@ -50,54 +40,56 @@ app.get('/temp_resized_*', (req, res) => {
   console.log(`[${requestId}] Full URL:`, req.url);
   console.log(`[${requestId}] __dirname:`, __dirname);
   console.log(`[${requestId}] process.cwd():`, process.cwd());
-  console.log(`[${requestId}] Tried paths:`);
-  possiblePaths.forEach((p, i) => {
-    const exists = fs.existsSync(p);
-    console.log(`[${requestId}]   ${i + 1}. ${p}`);
-    console.log(`[${requestId}]      → ${exists ? '✓ EXISTS' : '✗ NOT FOUND'}`);
-    if (exists) {
-      try {
-        const stats = fs.statSync(p);
-        console.log(`[${requestId}]      → Size: ${stats.size} bytes`);
-        console.log(`[${requestId}]      → Modified: ${stats.mtime}`);
-      } catch (e) {
-        console.error(`[${requestId}]      → Error reading stats:`, e.message);
-      }
-    }
-  });
-  console.log(`[${requestId}] Selected path:`, resizedPath);
-  if (resizedPath) {
+  console.log(`[${requestId}] Primary path:`, resizedPath);
+  console.log(`[${requestId}] Primary exists:`, fs.existsSync(resizedPath));
+  console.log(`[${requestId}] Alt path:`, altResizedPath);
+  console.log(`[${requestId}] Alt exists:`, fs.existsSync(altResizedPath));
+  
+  // Try primary path first (like working version), then fallback
+  let finalPath = null;
+  if (fs.existsSync(resizedPath)) {
+    finalPath = resizedPath;
+    console.log(`[${requestId}] ✓ Using primary path`);
+  } else if (fs.existsSync(altResizedPath)) {
+    finalPath = altResizedPath;
+    console.log(`[${requestId}] ✓ Using alternative path`);
+  }
+  if (finalPath) {
     try {
-      const stats = fs.statSync(resizedPath);
-      console.log(`[${requestId}] ✓ File verified:`);
-      console.log(`[${requestId}]   Size:`, stats.size, 'bytes');
-      console.log(`[${requestId}]   Created:`, stats.birthtime);
-      console.log(`[${requestId}]   Modified:`, stats.mtime);
+      const stats = fs.statSync(finalPath);
+      console.log(`[${requestId}] ✓ File verified - Size: ${stats.size} bytes`);
     } catch (e) {
       console.error(`[${requestId}] ✗ Error reading file stats:`, e.message);
     }
   }
   console.log('='.repeat(80));
   
-  if (resizedPath && fs.existsSync(resizedPath)) {
-    // Set aggressive cache headers to prevent caching of generated images
+  if (finalPath && fs.existsSync(finalPath)) {
+    // Set cache headers
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.setHeader('Last-Modified', new Date().toUTCString());
-    res.setHeader('ETag', `"${Date.now()}"`);
     res.setHeader('Content-Type', 'image/jpeg');
-    res.sendFile(path.resolve(resizedPath));
+    console.log(`[${requestId}] ✓ Sending image file`);
+    res.sendFile(path.resolve(finalPath), (err) => {
+      if (err) {
+        console.error(`[${requestId}] ✗ Error sending file:`, err.message);
+      } else {
+        console.log(`[${requestId}] ✓ File sent successfully`);
+      }
+    });
   } else {
-    console.error('ERROR: Resized image not found');
-    console.error('  Searched paths:', possiblePaths);
-    console.error('  Requested filename:', filename);
+    console.error(`[${requestId}] ✗ ERROR: Resized image not found`);
+    console.error(`[${requestId}]   Primary: ${resizedPath} - ${fs.existsSync(resizedPath) ? 'EXISTS' : 'NOT FOUND'}`);
+    console.error(`[${requestId}]   Alt: ${altResizedPath} - ${fs.existsSync(altResizedPath) ? 'EXISTS' : 'NOT FOUND'}`);
     res.status(404).json({ 
       error: 'Resized image not found', 
       filename: filename,
-      searchedPaths: possiblePaths,
+      primaryPath: resizedPath,
+      altPath: altResizedPath,
       __dirname: __dirname,
-      cwd: process.cwd()
+      cwd: process.cwd(),
+      requestId: requestId
     });
   }
 });
