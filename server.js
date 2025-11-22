@@ -20,7 +20,7 @@ app.use(express.json());
 
 
 // Serve built frontend (Vite) if present
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
