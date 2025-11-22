@@ -7,46 +7,44 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex items-start justify-center overflow-hidden pt-24">
       {/* Background Image */}
       <div 
         className="absolute inset-0 z-0"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80)',
+          backgroundImage: 'url(/homepage_images/home-page-img.jpeg)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundPosition: 'top center',
         }}
       >
-        {/* Dark gradient overlay for text contrast */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/60" />
       </div>
 
-      {/* Content - Centered vertically and horizontally */}
-      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight text-white">
+      {/* Content - Positioned higher on the image */}
+      <div className="relative z-10 text-center px-4 sm:px-6 max-w-5xl mx-auto mt-12 sm:mt-16 md:mt-24">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 tracking-tight text-white">
           Visualize your space.
           <br />
           Choose with confidence.
         </h1>
-        <p className="text-lg md:text-xl mb-12 max-w-2xl mx-auto text-white/90">
-         Open the door to your future space—beyond imagination, into an experience.
+        <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-2xl mx-auto text-white/90 px-4">
+         Beyond imagination, into an experience.
         </p>
         
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6 px-4">
           <Button 
             onClick={onGetStarted}
             size="lg"
-            className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white rounded-full px-10 py-6 text-lg font-medium shadow-lg hover:shadow-xl transition-all"
+            className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white rounded-full px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 text-base sm:text-lg font-medium shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
             aria-label="Try our visualizer - Start visualizing your space"
           >
             Try our visualizer
-            <ArrowRight className="ml-2 h-5 w-5" />
+            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
           <Button 
             size="lg"
             variant="outline"
-            className="rounded-full px-10 py-6 text-lg border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-[#222] transition-all font-medium"
+            className="rounded-full px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 text-base sm:text-lg border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-[#222] transition-all font-medium w-full sm:w-auto"
           >
             Book appointment
           </Button>

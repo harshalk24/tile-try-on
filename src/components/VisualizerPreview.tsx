@@ -770,15 +770,15 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
                     ? `${roomTypes.find(rt => rt.type === selectedRoomType)?.label || ""} thumbnail`
                     : (filteredRenders[currentRoomIndex] || filteredRenders[0])?.name || "Room render"
               }
-              className="w-[1200px] h-[800px] max-w-[90vw] max-h-[85vh] object-contain"
+              className="w-full max-w-[1200px] h-auto max-h-[85vh] object-contain"
             />
 
 
 
-            {/* Large Circular Cursor CTA - Only show when no custom image is uploaded and not showing thumbnail */}
-            {!customRoomImage && !showThumbnail && (
+            {/* Large Circular Cursor CTA - Show when no custom image is uploaded */}
+            {!customRoomImage && (
               <button
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[31vmin] h-[31vmin] max-w-[294px] max-h-[294px] bg-[rgba(255,107,53,0.78)] rounded-full flex items-center justify-center shadow-[0_12px_30px_rgba(0,0,0,0.28)] cursor-pointer transition-all duration-200 hover:scale-[1.06] hover:shadow-[0_18px_40px_rgba(0,0,0,0.36)] focus:outline-none focus:ring-4 focus:ring-white/40 z-30"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] md:w-[294px] md:h-[294px] bg-[rgba(255,107,53,0.55)] hover:bg-[rgba(255,107,53,0.78)] rounded-full flex items-center justify-center shadow-[0_12px_30px_rgba(0,0,0,0.28)] cursor-pointer transition-all duration-200 hover:scale-[1.06] hover:shadow-[0_18px_40px_rgba(0,0,0,0.36)] focus:outline-none focus:ring-4 focus:ring-white/40 z-30"
                 onClick={handleCursorClick}
                 aria-label="Upload custom room photo"
                 title="Upload custom room photo"
@@ -793,7 +793,9 @@ const VisualizerPreview = ({ onEnterVisualizer, onExit, onUploadRoom, onSwitchTo
                   strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M6 18L18 6M11 6h7v7" />
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 5 17 10" />
+                  <line x1="12" y1="5" x2="12" y2="15" />
                 </svg>
               </button>
             )}

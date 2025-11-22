@@ -1,6 +1,6 @@
 ---
 title: "Contact Us"
-last_updated: "2024-01-15"
+last_updated: "2025-11-20"
 ---
 
 # Contact Us
@@ -40,13 +40,10 @@ Interested in partnering with Nazaraa? We're always looking for:
 - Technology partners
 - Retail partners
 
-Contact our partnerships team at **partnerships@nazaraa.in** to explore collaboration opportunities.
+Contact our partnerships team at **support@nazaraa.in** to explore collaboration opportunities.
 
 ## Support
 
 For technical support or questions about using our platform, please contact **support@nazaraa.in**. Our support team typically responds within 24 hours.
 
-## Feedback
-
-Your feedback helps us improve! Share your thoughts, suggestions, or report issues at **feedback@nazaraa.in**.
 

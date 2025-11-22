@@ -1,67 +1,44 @@
 const MESASection = () => {
-  const mentors = [
-    {
-      name: "Varun Limaye",
-      role: "Co-founder, MESA School of Business. Product, GTM & Founder-Mentality Mentor.",
-      photo: "/mentors/varun-limaye.jpg" // Placeholder - you can add actual photos later
-    },
-    {
-      name: "Ankit Agarwal",
-      role: "Cofounder, Do Your Thng. Branding, Growth & Consumer Behaviour Mentor.",
-      photo: "/mentors/ankit-agarwal.jpg" // Placeholder - you can add actual photos later
-    },
-    {
-      name: "Siddharth Chauhan",
-      role: "Ex-VP, Byju's. Sales, Ops & Category Strategy Mentor.",
-      photo: "/mentors/siddharth-chauhan.jpg" // Placeholder - you can add actual photos later
-    }
-  ];
-
   return (
-    <section className="py-[80px] px-6 bg-[#F6F7F8]">
-      <div className="container mx-auto max-w-6xl">
-        <h2 className="text-4xl font-bold text-center text-[#222] mb-4">
-          Backed by MESA School of Business
-        </h2>
-        <p className="text-center text-[#222]/70 mb-12 max-w-3xl mx-auto text-lg">
-          We are proudly supported by India's leading entrepreneurial program, with hands-on mentorship that shapes our product, strategy, and go-to-market execution.
-        </p>
+    <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-12 lg:px-16 bg-[#F6F7F8] relative">
+      {/* MESA Logo in corner */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8 z-10">
+        <img 
+          src="/homepage_images/mesa logo.png" 
+          alt="MESA School of Business Logo"
+          className="h-8 sm:h-12 md:h-16 w-auto opacity-90"
+        />
+      </div>
 
-        {/* Mentor Cards Grid */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {mentors.map((mentor, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 shadow-[0_4px_16px_rgba(0,0,0,0.06)] text-center"
-            >
-              {/* Circular Photo Placeholder */}
-              <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-[#E6E6E6] flex items-center justify-center overflow-hidden">
-                {mentor.photo ? (
-                  <img
-                    src={mentor.photo}
-                    alt={mentor.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#FF6B35]/20 to-[#FF6B35]/10 flex items-center justify-center">
-                    <span className="text-[#FF6B35] text-2xl font-bold">
-                      {mentor.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Mentor Name */}
-              <h3 className="text-xl font-bold text-[#222] mb-3">
-                {mentor.name}
-              </h3>
-
-              {/* Role Description */}
-              <p className="text-sm text-[#222]/70 leading-relaxed">
-                {mentor.role}
-              </p>
+      <div className="container mx-auto max-w-7xl">
+        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
+          {/* Image Section */}
+          <div className="order-2 md:order-1">
+            <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
+              <img 
+                src="/homepage_images/Mesa-School-funding-feature-760x570.png" 
+                alt="MESA School of Business"
+                className="w-full h-auto object-cover"
+              />
             </div>
-          ))}
+          </div>
+
+          {/* Content Section */}
+          <div className="order-1 md:order-2">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#222] mb-4 sm:mb-6">
+              Backed by MESA School of Business
+            </h2>
+            <p className="text-base sm:text-lg text-[#222]/70 mb-4 sm:mb-6 leading-relaxed">
+              We are proudly incubated by India's leading entrepreneurial program, MESA School of Business. Through hands-on mentorship from industry experts, we've refined our product, strategy, and go-to-market execution to better serve our customers.
+            </p>
+            <p className="text-base sm:text-lg text-[#222]/70 mb-4 sm:mb-6 leading-relaxed">
+              Being incubated by MESA provides us with invaluable guidance in product development, branding, growth strategies, and sales operations, enabling us to deliver innovative solutions that transform how homeowners, designers, and retailers visualize and select materials for their spaces.
+            </p>
+            {/* Co-founders Description */}
+            <p className="text-sm sm:text-base text-[#222]/80 italic leading-relaxed border-l-4 border-[#FF6B35] pl-3 sm:pl-4">
+              Founded by Varun Limaye and Ankit Agarwal, MESA School of Business is India's leading entrepreneurial program dedicated to nurturing innovative startups and empowering the next generation of business leaders.
+            </p>
+          </div>
         </div>
       </div>
     </section>

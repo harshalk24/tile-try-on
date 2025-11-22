@@ -1,132 +1,76 @@
-import { Button } from "./ui/button";
-import { Search, Filter } from "lucide-react";
-import { Input } from "./ui/input";
-import { useState } from "react";
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  thumbnail: string;
-  category: string;
-}
-
 const ProductsSection = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-
-  const products: Product[] = [
+  const graphics = [
     {
-      id: "floors",
-      name: "Floors",
-      description: "Explore tile, hardwood, and luxury vinyl options",
-      thumbnail: "/tiles/marble-tile.jpg",
-      category: "floors"
+      id: 1,
+      image: "/homepage_images/graphic 1.png",
+      title: "Easy Upload & Selection",
+      description: "Upload your room photo and explore our extensive library of design options"
     },
     {
-      id: "countertops",
-      name: "Countertops",
-      description: "Granite, quartz, and marble surfaces",
-      thumbnail: "/tiles/design-tile.jpg",
-      category: "countertops"
+      id: 2,
+      image: "/homepage_images/graphic 2.png",
+      title: "Design Customization",
+      description: "Choose from tiles, paint, wallpaper, panels, and wall decor to customize your space"
     },
     {
-      id: "rugs",
-      name: "Rugs",
-      description: "Area rugs and carpeting solutions",
-      thumbnail: "/tiles/oak-wood.webp",
-      category: "rugs"
-    },
-    {
-      id: "walls",
-      name: "Walls",
-      description: "Wall tiles, paint, and decorative finishes",
-      thumbnail: "/tiles/wooden-tile.jpg",
-      category: "walls"
+      id: 3,
+      image: "/homepage_images/graphic 3.png",
+      title: "Real-time Visualization",
+      description: "See your design come to life with photorealistic visualizations and compare with original"
     }
   ];
 
-  const categories = ["all", "floors", "countertops", "rugs", "walls"];
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   return (
-    <section className="py-20 px-6 bg-[#FF6B35]/10">
-      <div className="container mx-auto max-w-6xl">
-        <h2 className="text-4xl font-bold text-center text-[#222] mb-4">
-          Products
-        </h2>
-        <p className="text-center text-[#222]/70 mb-12 max-w-2xl mx-auto">
-          Browse our extensive catalog of materials and finishes
-        </p>
-
-        {/* Filter / Search */}
-        <div className="flex flex-col md:flex-row gap-4 mb-12">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#222]/40" />
-            <Input
-              type="text"
-              placeholder="Search materials..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 bg-white border-[#E6E6E6]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-[#222]/40" />
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === cat
-                      ? "bg-[#FF6B35] text-white"
-                      : "bg-white text-[#222] hover:bg-[#E6E6E6] border border-[#E6E6E6]"
-                  }`}
-                >
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+    <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-12 lg:px-16 bg-[#FFE5D4]">
+      <div className="container mx-auto max-w-7xl">
+        <div className="text-center mb-8 sm:mb-12 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#222] mb-3 sm:mb-4">
+            How It Works
+          </h2>
+          <p className="text-base sm:text-lg text-[#222]/70 max-w-3xl mx-auto px-4">
+            Transform your space in three simple steps with our intuitive design platform
+          </p>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+        {/* Graphics Grid */}
+        <div className="grid md:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 mb-8 sm:mb-12">
+          {graphics.map((graphic, index) => (
+            <div 
+              key={graphic.id}
+              className="flex flex-col items-center text-center"
             >
-              <div className="aspect-video bg-[#F6F7F8] overflow-hidden">
-                <img
-                  src={product.thumbnail}
-                  alt={product.name}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              {/* Image Container */}
+              <div className="w-full mb-4 sm:mb-6 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white">
+                <img 
+                  src={graphic.image} 
+                  alt={graphic.title}
+                  className="w-full h-auto object-contain"
                 />
               </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-[#222] mb-2">
-                  {product.name}
+              
+              {/* Content */}
+              <div className="max-w-sm px-2">
+                <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#FF6B35]/20 mb-3 sm:mb-4">
+                  <span className="text-xl sm:text-2xl font-bold text-[#FF6B35]">
+                    {index + 1}
+                  </span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-[#222] mb-2 sm:mb-3">
+                  {graphic.title}
                 </h3>
-                <p className="text-sm text-[#222]/70 mb-4">
-                  {product.description}
+                <p className="text-sm sm:text-base text-[#222]/70 leading-relaxed">
+                  {graphic.description}
                 </p>
-                <Button
-                  variant="outline"
-                  className="w-full border-[#FF6B35] text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
-                >
-                  Explore
-                </Button>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Stats Text */}
+        <div className="text-center px-4">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-[#222] font-medium max-w-4xl mx-auto leading-relaxed">
+            Proven to increase retailer conversion rates by <span className="font-bold text-[#FF6B35]">40%</span> and reduce customer tile-selection time by <span className="font-bold text-[#FF6B35]">50%</span>— get started in under 5 minutes.
+          </p>
         </div>
       </div>
     </section>

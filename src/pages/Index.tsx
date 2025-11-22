@@ -4,8 +4,8 @@ import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
 import ValueProposition from "@/components/ValueProposition";
 import ProductsSection from "@/components/ProductsSection";
+import FeatureSlide from "@/components/FeatureSlide";
 import TargetAudience from "@/components/TargetAudience";
-import HowItWorks from "@/components/HowItWorks";
 import MESASection from "@/components/MESASection";
 import FAQ from "@/components/FAQ";
 import Footer from "@/components/Footer";
@@ -226,9 +226,9 @@ const Index = () => {
         <HeroSection onGetStarted={() => setShowVisualizerPreview(true)} />
         <ValueProposition />
         <ProductsSection />
-        <TargetAudience />
-        <HowItWorks />
+        <FeatureSlide onGetStarted={() => setShowVisualizerPreview(true)} />
         <MESASection />
+        <TargetAudience />
         <FAQ />
         <Footer />
       </div>
