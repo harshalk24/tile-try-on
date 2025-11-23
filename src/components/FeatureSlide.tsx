@@ -7,7 +7,7 @@ interface FeatureSlideProps {
 
 const FeatureSlide = ({ onGetStarted }: FeatureSlideProps) => {
   return (
-    <section className="relative min-h-[600px] sm:min-h-[700px] md:min-h-[800px] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[500px] sm:min-h-[600px] md:min-h-[700px] flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-20">
       {/* Background Image */}
       <div 
         className="absolute inset-0 z-0"
@@ -24,39 +24,39 @@ const FeatureSlide = ({ onGetStarted }: FeatureSlideProps) => {
       {/* Content */}
       <div className="relative z-10 w-full px-4 sm:px-6 max-w-7xl mx-auto">
         {/* Heading */}
-        <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#222] mb-4 sm:mb-6">
+        <div className="text-center mb-6 sm:mb-8 md:mb-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#222] mb-4 sm:mb-6">
             Who are we catering to?
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 md:gap-12 mb-8 sm:mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 md:gap-12 mb-6 sm:mb-8 md:mb-12">
           {/* Large Retailer */}
           <div className="text-left">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-[#222]">
+            <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 md:mb-4 text-[#222]">
               Large Retailer
             </h3>
-            <p className="text-base sm:text-lg text-[#222]/70 leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-[#222]/70 leading-relaxed">
               Deliver in-store and online solutions that increase sales and enhance customer satisfaction.
             </p>
           </div>
 
           {/* E-Commerce */}
           <div className="text-left">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-[#222]">
+            <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 md:mb-4 text-[#222]">
               E-Commerce
             </h3>
-            <p className="text-base sm:text-lg text-[#222]/70 leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-[#222]/70 leading-relaxed">
               Transform online shopping experiences and boost conversions with seamless visualization tools.
             </p>
           </div>
 
           {/* Architects & Designers */}
           <div className="text-left">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-[#222]">
+            <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 md:mb-4 text-[#222]">
               Architects & Designers
             </h3>
-            <p className="text-base sm:text-lg text-[#222]/70 leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-[#222]/70 leading-relaxed">
               Visualize ideas with ease and bring client concepts to life with immersive design tools.
             </p>
           </div>
