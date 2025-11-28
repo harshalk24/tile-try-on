@@ -1,11 +1,21 @@
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface FeatureSlideProps {
   onGetStarted?: () => void;
 }
 
 const FeatureSlide = ({ onGetStarted }: FeatureSlideProps) => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (onGetStarted) {
+      onGetStarted();
+    } else {
+      navigate("/login");
+    }
+  };
   return (
     <section className="relative min-h-[500px] sm:min-h-[600px] md:min-h-[700px] flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-20">
       {/* Background Image */}
@@ -63,19 +73,17 @@ const FeatureSlide = ({ onGetStarted }: FeatureSlideProps) => {
         </div>
 
         {/* CTA Button */}
-        {onGetStarted && (
-          <div className="text-center">
-            <Button 
-              onClick={onGetStarted}
-              size="lg"
-              className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white rounded-full px-8 sm:px-10 py-5 sm:py-6 text-base sm:text-lg font-medium shadow-lg hover:shadow-xl transition-all"
-              aria-label="Start visualizing your space"
-            >
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </div>
-        )}
+        <div className="text-center">
+          <Button 
+            onClick={handleGetStarted}
+            size="lg"
+            className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white rounded-full px-8 sm:px-10 py-5 sm:py-6 text-base sm:text-lg font-medium shadow-lg hover:shadow-xl transition-all"
+            aria-label="Start visualizing your space"
+          >
+            Get Started
+            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+        </div>
       </div>
     </section>
   );

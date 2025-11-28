@@ -1,18 +1,28 @@
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HeroSectionProps {
-  onGetStarted: () => void;
+  onGetStarted?: () => void;
 }
 
 const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (onGetStarted) {
+      onGetStarted();
+    } else {
+      navigate("/login");
+    }
+  };
   return (
     <section className="relative min-h-screen flex items-start justify-center overflow-hidden pt-24">
       {/* Background Image */}
       <div 
         className="absolute inset-0 z-0"
         style={{
-          backgroundImage: 'url(/homepage_images/home-page-img.jpeg)',
+          backgroundImage: 'url(/homepage_images/home-page-img.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'top center',
         }}
@@ -33,7 +43,7 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6 px-4">
           <Button 
-            onClick={onGetStarted}
+            onClick={handleGetStarted}
             size="lg"
             className="bg-[#FF6B35] hover:bg-[#E55A2B] text-white rounded-full px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 text-base sm:text-lg font-medium shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
             aria-label="Try our visualizer - Start visualizing your space"

@@ -15,7 +15,7 @@ const ValueProposition = () => {
       icon: GitCompare,
       title: "Enhanced Customer Experience",
       benefit: "Customers make decisions 5x faster and convert up to 2.5x more when they can see materials in their own space with Nazaraa.",
-      image: "/homepage_images/customer-experience.jpg"
+      image: "/homepage_images/differentiator.png"
     },
     {
       icon: Zap,
@@ -43,7 +43,7 @@ const ValueProposition = () => {
               className="text-center rounded-lg bg-[#F6F7F8] hover:bg-[#E6E6E6] transition-all overflow-hidden shadow-sm hover:shadow-md"
             >
               {/* Image Section */}
-              <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72 overflow-hidden bg-gradient-to-br from-[#FF6B35]/20 to-[#FF6B35]/10">
+              <div className="relative w-full h-64 overflow-hidden bg-gradient-to-br from-[#FF6B35]/20 to-[#FF6B35]/10">
                 {imageErrors[index] ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#FF6B35]/20">

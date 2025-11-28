@@ -72,7 +72,6 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t border-white/20 flex items-center justify-between text-sm text-white/50">
           <div className="flex items-center gap-4">
             <span>🔒 Secure checkout</span>
-            <span>✓ Trusted by 10,000+ customers</span>
           </div>
           <p>Powered by <span className="text-[#FF6B35]">nazaraa</span></p>
         </div>

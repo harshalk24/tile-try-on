@@ -29,10 +29,10 @@ const MESASection = () => {
               Backed by MESA School of Business
             </h2>
             <p className="text-base sm:text-lg text-[#222]/70 mb-4 sm:mb-6 leading-relaxed">
-              We are proudly incubated by India's leading entrepreneurial program, MESA School of Business. Through hands-on mentorship from industry experts, we've refined our product, strategy, and go-to-market execution to better serve our customers.
+              We are proudly incubated by MESA School of Business, India's leading entrepreneurial program. With hands-on mentorship from industry experts, we've refined our product, strategy, and go-to-market execution to better serve our customers.
             </p>
             <p className="text-base sm:text-lg text-[#222]/70 mb-4 sm:mb-6 leading-relaxed">
-              Being incubated by MESA provides us with invaluable guidance in product development, branding, growth strategies, and sales operations, enabling us to deliver innovative solutions that transform how homeowners, designers, and retailers visualize and select materials for their spaces.
+              MESA's guidance across product development, branding, growth, and sales helps us deliver innovative solutions that transform how homeowners, designers, and retailers visualize and select materials.
             </p>
             {/* Co-founders Description */}
             <p className="text-sm sm:text-base text-[#222]/80 italic leading-relaxed border-l-4 border-[#FF6B35] pl-3 sm:pl-4">

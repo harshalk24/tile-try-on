@@ -14,6 +14,8 @@ import CareersPage from "./pages/CareersPage";
 import BlogPage from "./pages/BlogPage";
 import ProductsPage from "./pages/ProductsPage";
 import VisualizerPage from "./pages/VisualizerPage";
+import LoginPage from "./pages/LoginPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +37,15 @@ const App = () => (
             <Route path="/careers" element={<CareersPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/products" element={<ProductsPage />} />
-            <Route path="/visualizer" element={<VisualizerPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route 
+              path="/visualizer" 
+              element={
+                <ProtectedRoute>
+                  <VisualizerPage />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -20,7 +20,7 @@ const Header = ({ onBack, showBackButton = false }: HeaderProps) => {
           <img 
             src="/logo/Nazaraa-logo.png" 
             alt="Nazaraa Logo" 
-            className="h-20 w-auto"
+            className="h-18 w-auto"
           />
         </div>
       </div>

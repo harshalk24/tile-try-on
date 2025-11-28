@@ -2,19 +2,19 @@ const ProductsSection = () => {
   const graphics = [
     {
       id: 1,
-      image: "/homepage_images/graphic 1.png",
+      image: "/homepage_images/product-graphic1.jpeg",
       title: "Easy Upload & Selection",
       description: "Upload your room photo and explore our extensive library of design options"
     },
     {
       id: 2,
-      image: "/homepage_images/graphic 2.png",
+      image: "/homepage_images/product-graphic2.jpeg",
       title: "Design Customization",
       description: "Choose from tiles, paint, wallpaper, panels, and wall decor to customize your space"
     },
     {
       id: 3,
-      image: "/homepage_images/graphic 3.png",
+      image: "/homepage_images/product-graphic3.jpeg",
       title: "Real-time Visualization",
       description: "See your design come to life with photorealistic visualizations and compare with original"
     }

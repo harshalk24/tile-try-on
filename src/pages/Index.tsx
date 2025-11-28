@@ -223,10 +223,10 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <HeroSection onGetStarted={() => setShowVisualizerPreview(true)} />
-        <ValueProposition />
+        <HeroSection />
         <ProductsSection />
-        <FeatureSlide onGetStarted={() => setShowVisualizerPreview(true)} />
+        <FeatureSlide />
+        <ValueProposition />
         <MESASection />
         <TargetAudience />
         <FAQ />

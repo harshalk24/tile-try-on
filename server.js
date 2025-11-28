@@ -408,6 +408,7 @@ import requests
 import io
 import sys
 import time
+from PIL import ImageOps
 
 # Ensure API token is available in environment
 if "REPLICATE_API_TOKEN" not in os.environ or not os.environ.get("REPLICATE_API_TOKEN"):
@@ -520,42 +521,25 @@ try:
         if visualization_type == "both":
           prompt = (
 
-          "Execute a surgical, high-fidelity material replacement on the provided interior room photograph using: "
-          "The second image as the floor material reference, and "
-          "The third image as the wall material reference. "
-          "Goal: Replace only the visible floor plane and vertical wall surfaces. Preserve all non-masked elements — ceiling, furniture, decor, windows, lights, and reflections — perfectly intact. "
-          
-          "Step 1 — Floor Replacement (Geometry Critical): "
-          "Identify and mask ONLY the floor plane, rigorously excluding walls, furniture bases, and shadows.[1] "
-          "Apply the floor material texture (from image 2) enforcing strict **vanishing point alignment and accurate perspective scaling** of the pattern/grout lines. "
-          "Use **context-aware recognition** to integrate the new floor texture.[5] Maintain the realistic light direction and generate **accurate contact shadows** under all furniture.[6] "
-          "**Crucially, suppress all texture repetition or visible tiling artifacts** across the floor surface. "
-          
-          "Step 2 — Wall Replacement (Precision Critical): "
-          "Identify and mask ONLY the vertical wall surfaces. "
-          "Replace these with the wall material texture (from image 3). The new material must maintain the **original light gradients and tone mapping** of the wall planes.[6] "
-          "**Preserve all existing geometric boundaries** precisely near windows, door frames, and ceiling/floor junctions, enforced by ControlNet Canny edge guidance. "
-
-          "Step 3 — Integration & Blending: "
-          "Ensure a seamless, **multi-level frequency blend** at all mask boundaries (edge-aware transition) to prevent harsh cut lines or bleed. "
-          "The final output must be **photorealistic and high-detail**, appearing as if both materials were physically installed with zero AI noise or geometric distortion.[12, 13]"
-
+          "Replace the floor using the second image, and replace the walls using the third image. "
+          "Do not change any other part of the room. "
+          "Keep the original room structure: "
+          "- Preserve furniture, decor, windows, ceiling, lights, shadows, and reflections. "
+          "- Maintain correct perspective for both floor and walls. "
+          "- Blend materials naturally with room lighting. "
+          "Only change the floor and wall surfaces. Everything else must remain untouched. "
       )
 
         else:
             # Walls only - use the high-precision prompt
             prompt = (
-            "Execute a surgical, high-precision visual edit on the provided room photo using the second image as the wall material reference."
-
-            "Objective: Replace ONLY the visible vertical wall surfaces in the room with the new material, covering the ENTIRE continuous wall plane with no gaps or partial edits. Keep all other elements—ceiling, floor, furniture, windows, decor, ducting, and lighting—perfectly intact."
-
-            "Instructions: "
-            "Identify and mask ONLY the true wall regions (semantic segmentation), including all connected vertical planes even if lighting varies or corners create low-contrast boundaries. Do NOT leave any portion of the wall unedited."
-            "Maintain extremely precise wall boundaries, ensuring no spillover onto ceiling, floor, windows, trim, or furniture. Respect the original architectural layout—do NOT invent new walls or expand existing ones."
-            "Apply the new wall material with correct perspective alignment, scale, and vanishing point coherence. Preserve the original lighting, shadows, reflections, and depth cues so the material integrates naturally."
-            "Use a soft, feathered blending transition along all edges to eliminate haloing, masking noise, or bleed onto nearby objects. Preserve sharp edges where the wall meets windows, pillars, or ceiling lines."
-            "Suppress all repetitive texture patterns, tiling artifacts, noise, and overpainting errors. Ensure the applied texture remains clean, realistic, and consistent across the full wall surface."
-            "The final result must be photorealistic, high-detail, and perfectly integrated with the original room geometry—appearing as if the new wall material was physically installed."
+            "Replace only the visible walls in the room using the second image as the wall material. "
+            "Do not modify the floor, furniture, windows, ceiling, or any objects. "
+            "Keep the room structure exactly the same: "
+            "- Maintain original lighting and shadows on the wall. "
+            "- Preserve edges around windows, doors, and ceiling lines. "
+            "- Apply the new material cleanly without affecting other areas. "
+            "The result should look like the new wall material was installed in the real room. "
         )
         
         # Handle "both" visualization with 3 images (room, floor tile, wall tile)
@@ -627,14 +611,17 @@ try:
     else:
         # Floor only - original prompt
         prompt = (
-        "Perform a surgical, precise visual edit on the provided room photo: "
-        "Identify and mask ONLY the floor area (semantic segmentation) [1], ensuring 100% coverage of the visible floor plane. "
-        "Replace the flooring material using the second image as the tile reference. "
-        "The new material must enforce strict **vanishing point alignment and accurate perspective scaling** for the pattern/grout lines. "
-        "Blend the new floor texture naturally, adjusting for scale, angle, and light reflection. Anchor all furniture with **realistic contact shadows**.[6] "
-        "**Suppress all repetitive texture patterns or visible tiling artifacts**. "
-        "Do not alter walls, furniture, ceiling, or lighting setup. "
-        "Keep the result **photorealistic and high-detail**, looking physically installed with seamless, soft edge transitions.[10, 12]"
+        "Replace only the floor in the room using the second image as the floor material."
+        "Keep the walls, ceiling, furniture, lighting, shadows, and all objects exactly the same."
+        "Do not modify room geometry or change perspective."
+
+        "Apply the new material realistically: "
+        "- Match the original floor perspective and angle. "
+        "- Blend it naturally with the room lighting. "
+        "- Keep furniture shadows and contact points intact. "
+        "- Do not distort or alter any objects. "
+
+        "Do not change anything except the floor surface. "
     )
         
         room_file = open(room_path, "rb")
@@ -719,18 +706,31 @@ try:
             print(f"Downloaded image from Replicate (nano-banana output): {output_url}")
             print(f"Downloaded image size: {generated_img.size}, format: {generated_img.format}")
             
+            # Crop out Gemini watermark/diamond symbol (typically in bottom-right corner)
+            # Remove approximately 50-80 pixels from bottom-right corner where watermarks appear
+            img_width, img_height = generated_img.size
+            crop_margin = 80  # Pixels to crop from bottom and right edges
+            if img_width > crop_margin and img_height > crop_margin:
+                print(f"Cropping out watermark area: removing {crop_margin}px from bottom-right")
+                generated_img = generated_img.crop((0, 0, img_width - crop_margin, img_height - crop_margin))
+                print(f"Image size after watermark crop: {generated_img.size}")
+            
             # Get original room image dimensions (already corrected for orientation)
             # Use the corrected room image that was saved earlier
             original_img = Image.open(room_path)
             original_size = original_img.size
             
             print(f"Original image size (after orientation correction): {original_size}")
-            print(f"Generated image size: {generated_img.size}")
+            print(f"Generated image size (after watermark crop): {generated_img.size}")
             
             # ALWAYS resize to match original dimensions exactly
             print(f"Resizing generated image from {generated_img.size} to {original_size}")
-            generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
-            
+            orig_w, orig_h = original_size
+
+            # Use ImageOps.fit to crop to the correct aspect ratio, then resize.
+            # This keeps the generated image from being stretched.
+            generated_img = ImageOps.fit(generated_img, (orig_w, orig_h), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+                        
             # Save resized image to a temporary file in the public directory
             # Get the server's public directory path from environment variable
             # SERVER_ROOT should be the project root (where server.js is located)
